@@ -58,6 +58,8 @@ html {
   background-size: cover, 800px 600px;
   background-blend-mode: overlay, normal;
   min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* glossy sheen overlay for light theme only: sits above the gradient but
@@ -92,6 +94,8 @@ body {
    but follows the document flow when content is long (no bouncing). */
 html, body {
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
 }
 body {
   display: flex;
@@ -128,6 +132,14 @@ body::after {
   width: 90%;
   max-width: 1100px;
   margin: 0 auto;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Layout */
