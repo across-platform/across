@@ -465,6 +465,7 @@ html[data-theme="dark"] .card h4 {
 
 /* Inputs & buttons */
 input, textarea { padding: 0.8rem; border: none; border-radius: calc(var(--radius) - 4px); background: #16202c; color: var(--text-light); }
+select { padding: 0.8rem; border: none; border-radius: calc(var(--radius) - 4px); background: #16202c; color: var(--text-light); }
 
 .btn {
   background: var(--accent);
@@ -637,6 +638,11 @@ form input, form textarea {
   border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.12); color: white;
   outline: none; font-size: 15px; backdrop-filter: blur(12px);
 }
+form select {
+  width: 100%; padding: 14px; margin: 10px 0; border-radius: calc(var(--radius) + 2px);
+  border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.12); color: white;
+  outline: none; font-size: 15px; backdrop-filter: blur(12px);
+}
 form textarea::placeholder, form input::placeholder { color: rgba(255,255,255,0.6); }
 
 .contact-form {
@@ -661,7 +667,8 @@ form textarea::placeholder, form input::placeholder { color: rgba(255,255,255,0.
 }
 
 .contact-form form input,
-.contact-form form textarea {
+.contact-form form textarea,
+.contact-form form select {
   background: rgba(255,255,255,0.98);
   border: 1px solid rgba(0,0,0,0.06);
   color: var(--text-dark);
@@ -689,7 +696,8 @@ html[data-theme="dark"] .hero .glass {
   background: rgba(2,6,23,0.78);
 }
 html[data-theme="dark"] .contact-form form input,
-html[data-theme="dark"] .contact-form form textarea {
+html[data-theme="dark"] .contact-form form textarea,
+html[data-theme="dark"] .contact-form form select {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.12);
   color: var(--text-dark);
@@ -717,6 +725,317 @@ html[data-theme="dark"] .contact-form .input-icon {
 .contact-form.glass.fade-in {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Authentication page */
+.auth-card {
+  width: 100%;
+  max-width: 720px;
+  text-align: left;
+}
+
+.auth-heading {
+  margin-bottom: 1.2rem;
+}
+
+.section-kicker {
+  margin-bottom: 0.35rem;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.auth-lead {
+  margin-bottom: 1.25rem;
+  max-width: 62ch;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  padding: 0.35rem;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.52);
+}
+
+html[data-theme="dark"] .auth-tabs {
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+}
+
+.auth-tabs .btn {
+  box-shadow: none;
+  border-radius: calc(var(--radius) - 4px);
+}
+
+.auth-tab.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.panel-heading {
+  margin-bottom: 0.85rem;
+}
+
+.panel-heading h3,
+.auth-panel h4,
+.admin-actions h3 {
+  margin-bottom: 0.2rem;
+  line-height: 1.25;
+}
+
+.auth-panel label {
+  display: block;
+  margin-top: 0.6rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.auth-status {
+  min-height: 1.4rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-light);
+}
+
+.auth-status.is-error {
+  color: var(--text-dark);
+  font-weight: 600;
+}
+
+.auth-status.is-success {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.auth-hint {
+  margin-top: 0.5rem;
+  font-size: 0.92rem;
+  color: var(--text-light);
+}
+
+.auth-rule,
+.admin-token-output:not(:empty) {
+  padding: 0.65rem 0.75rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: rgba(143,167,255,0.12);
+  border: 1px solid rgba(143,167,255,0.22);
+}
+
+.auth-check {
+  margin: 0.85rem 0 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  color: var(--text-light);
+}
+
+.auth-check input {
+  width: auto;
+  margin: 0.2rem 0 0;
+}
+
+.auth-honeypot {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#recover-request-form,
+#recover-apply-form {
+  margin-top: 1rem;
+}
+
+.auth-subpanel {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+html[data-theme="dark"] .auth-subpanel {
+  border-top-color: rgba(255,255,255,0.1);
+}
+
+.admin-card .auth-lead {
+  margin-bottom: 0.8rem;
+}
+
+.admin-card {
+  max-width: 980px;
+}
+
+#admin-login-form,
+#admin-force-password-form {
+  max-width: 620px;
+  margin-top: 1rem;
+}
+
+.admin-session {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(0,0,0,0.07);
+  background: rgba(255,255,255,0.6);
+}
+
+.admin-session p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.admin-session-label {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-light);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+html[data-theme="dark"] .admin-session {
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+}
+
+.admin-workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+.admin-select-card,
+.admin-actions,
+.admin-users-list {
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(0,0,0,0.07);
+  background: rgba(255,255,255,0.54);
+}
+
+html[data-theme="dark"] .admin-select-card,
+html[data-theme="dark"] .admin-actions,
+html[data-theme="dark"] .admin-users-list {
+  border-color: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+}
+
+.admin-actions {
+  margin-top: 0;
+}
+
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.admin-selected-summary {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.7rem;
+  padding: 0.75rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: rgba(143,167,255,0.12);
+  color: var(--text-light);
+}
+
+.admin-selected-summary strong {
+  color: var(--text-dark);
+}
+
+.admin-users-list {
+  margin-top: 1rem;
+}
+
+.admin-users-list ul {
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-users-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.72);
+  color: var(--text-dark);
+}
+
+.admin-users-list li strong,
+.admin-users-list li span {
+  display: block;
+}
+
+.admin-users-list li span {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.admin-user-meta {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-badge {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.78);
+  color: var(--text-dark) !important;
+  font-size: 0.78rem !important;
+  font-weight: 700;
+}
+
+.admin-badge.is-active {
+  border-color: rgba(34,197,94,0.28);
+  background: rgba(34,197,94,0.12);
+}
+
+.admin-badge.is-disabled {
+  border-color: rgba(239,68,68,0.28);
+  background: rgba(239,68,68,0.12);
+}
+
+html[data-theme="dark"] .admin-users-list li {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+html[data-theme="dark"] .admin-badge {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+}
+
+html[data-theme="dark"] .auth-status.is-error {
+  color: var(--text-light);
+}
+
+html[data-theme="dark"] .auth-status.is-success {
+  color: var(--accent);
 }
 
 
@@ -753,6 +1072,32 @@ html[data-theme="dark"] .contact-form .input-icon {
   .section.contact-form .container,
   .hero .glass {
     padding: 1.5rem;
+  }
+
+  .auth-tabs {
+    flex-direction: column;
+  }
+
+  .auth-tabs .btn {
+    width: 100%;
+  }
+
+  .admin-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-row-actions .btn,
+  .admin-session .btn {
+    width: 100%;
+  }
+
+  .admin-users-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-user-meta {
+    justify-content: flex-start;
   }
 }
 

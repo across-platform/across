@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="hu" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Across-platform – Fiók</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="img/favicon.svg">
+  <meta name="theme-color" content="#07121a">
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Ugrás a tartalomra</a>
+<header class="navbar">
+  <div class="container">
+  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+
+    <nav aria-label="Fő navigáció">
+      <a href="index.html">Főoldal</a>
+      <a href="services.html">Szolgáltatások</a>
+      <a href="portfolio.html">Portfólió</a>
+      <a href="pricing.html">Árak</a>
+      <a href="contact.html">Kapcsolat</a>
+      <a href="auth.html">Fiók</a>
+      <a href="admin.html">Admin</a>
+    </nav>
+    <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
+  </div>
+</header>
+
+<main id="main">
+  <section id="auth" class="section contact-form">
+    <div class="container">
+      <div class="glass auth-card">
+        <div class="auth-heading">
+          <p class="section-kicker">Fiókkezelés</p>
+          <h2>Felhasználói fiók</h2>
+          <p class="auth-lead">Lépj be, hozz létre új fiókot, vagy állítsd vissza a hozzáférésed biztonságos jelszókezeléssel.</p>
+        </div>
+
+        <div class="auth-tabs" role="tablist" aria-label="Hitelesítés mód választása">
+          <button type="button" class="btn secondary auth-tab is-active" data-auth-tab="login" role="tab" aria-selected="true" aria-controls="auth-login-panel" id="auth-login-tab">Bejelentkezés</button>
+          <button type="button" class="btn secondary auth-tab" data-auth-tab="register" role="tab" aria-selected="false" aria-controls="auth-register-panel" id="auth-register-tab">Regisztráció</button>
+          <button type="button" class="btn secondary auth-tab" data-auth-tab="recover" role="tab" aria-selected="false" aria-controls="auth-recover-panel" id="auth-recover-tab">Fiók visszaállítás</button>
+        </div>
+
+        <div class="auth-status" id="auth-status" role="status" aria-live="polite"></div>
+
+        <div id="auth-login-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-login-tab">
+          <form id="login-form" novalidate>
+            <div class="panel-heading">
+              <h3>Bejelentkezés</h3>
+              <p class="auth-hint">Használd a regisztrált email címedet és jelszavadat.</p>
+            </div>
+
+            <label for="login-email">Email cím</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" required placeholder="pelda@email.hu">
+
+            <label for="login-password">Jelszó</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" minlength="12" required placeholder="Add meg a jelszavad">
+
+            <label class="auth-check">
+              <input id="remember" name="remember" type="checkbox">
+              <span>Emlékezzen rám ezen az eszközön</span>
+            </label>
+
+            <button type="submit" class="btn">Biztonságos bejelentkezés</button>
+          </form>
+
+          <form id="force-password-form" class="auth-subpanel" novalidate hidden>
+            <h3>Kötelező első jelszócsere</h3>
+            <p class="auth-hint">Biztonsági okból az első belépés után kötelező új jelszót beállítani.</p>
+
+            <label for="force-current-password">Jelenlegi jelszó</label>
+            <input id="force-current-password" name="currentPassword" type="password" autocomplete="current-password" required placeholder="Jelenlegi jelszó">
+
+            <label for="force-new-password">Új jelszó</label>
+            <input id="force-new-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required placeholder="Új erős jelszó">
+
+            <button type="submit" class="btn">Jelszó cseréje</button>
+          </form>
+        </div>
+
+        <div id="auth-register-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-register-tab" hidden>
+          <form id="register-form" novalidate>
+            <div class="panel-heading">
+              <h3>Új fiók létrehozása</h3>
+              <p class="auth-hint">A regisztráció után rögtön bejelentkezhetsz a megadott adatokkal.</p>
+            </div>
+
+            <label for="register-name">Teljes név</label>
+            <input id="register-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="80" required placeholder="Teljes név">
+
+            <label for="register-email">Email cím</label>
+            <input id="register-email" name="email" type="email" autocomplete="email" required placeholder="pelda@email.hu">
+
+            <label for="register-password">Jelszó</label>
+            <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="12" required placeholder="Legalább 12 karakter">
+
+            <label for="register-password-confirm">Jelszó megerősítése</label>
+            <input id="register-password-confirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="12" required placeholder="Jelszó újra">
+
+            <p class="auth-hint auth-rule" id="password-hint">Minimum 12 karakter, kis- és nagybetű, szám és speciális karakter szükséges.</p>
+
+            <label class="auth-check">
+              <input id="accept-terms" name="acceptTerms" type="checkbox" required>
+              <span>Elfogadom az adatkezelési és felhasználási feltételeket</span>
+            </label>
+
+            <input id="company" name="company" type="text" tabindex="-1" autocomplete="off" class="auth-honeypot" aria-hidden="true">
+
+            <button type="submit" class="btn">Biztonságos regisztráció</button>
+          </form>
+        </div>
+
+        <div id="auth-recover-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-recover-tab" hidden>
+          <div class="panel-heading">
+            <h3>Fiók visszaállítása</h3>
+            <p class="auth-hint">Kérj visszaállító tokent az email címedre, majd add meg itt az új jelszót. Fejlesztői módban a token megjelenik a felületen.</p>
+          </div>
+
+          <form id="recover-request-form" novalidate>
+            <h4>1. Token kérése</h4>
+            <label for="recover-email">Email cím</label>
+            <input id="recover-email" name="email" type="email" autocomplete="email" required placeholder="pelda@email.hu">
+            <button type="submit" class="btn">Visszaállító token kérése</button>
+          </form>
+
+          <form id="recover-apply-form" class="auth-subpanel" novalidate>
+            <h4>2. Új jelszó beállítása</h4>
+            <label for="recover-email-apply">Email cím</label>
+            <input id="recover-email-apply" name="email" type="email" autocomplete="email" required placeholder="pelda@email.hu">
+
+            <label for="recover-token">Visszaállító token</label>
+            <input id="recover-token" name="token" type="text" required placeholder="Token">
+
+            <label for="recover-password">Új jelszó</label>
+            <input id="recover-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required placeholder="Új erős jelszó">
+
+            <button type="submit" class="btn">Fiók visszaállítása</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>&copy; 2026 Across-platform | Minden jog fenntartva. | Powered by <a href="https://dev-control.hu">DEV Control</a></p>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
