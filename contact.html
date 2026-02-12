@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Across-platform – Távoli Segítség</title>
+  <title>Across-platform – Kapcsolat</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="img/favicon.svg">
@@ -12,7 +12,6 @@
 
 <body>
   <a class="skip-link" href="#main">Ugrás a tartalomra</a>
-
 <header class="navbar">
   <div class="container">
   <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
@@ -29,29 +28,24 @@
   </div>
 </header>
 
-<!-- HERO -->
-<section class="hero contact-form">
-  <div class="glass">
-    <h2>Távoli számítógépes segítség egyszerűen</h2>
-    <p>Gyors, barátságos és profi támogatás neked — bármikor, bárhol.</p>
+<main id="main">
+  <section id="contact" class="section contact-form">
+    <div class="container">
+      <h2>Kapcsolat</h2>
 
-    <div class="hero-buttons">
-      <a href="contact.html" class="btn">Írj nekünk</a>
-
-      <a href="https://anydesk.com/en/downloads" target="_blank" class="btn secondary">
-        AnyDesk letöltés
-      </a>
-
-      <a href="https://www.teamviewer.com/hu/download/" target="_blank" class="btn secondary">
-        TeamViewer letöltés
-      </a>
+      <form>
+        <input type="text" placeholder="Név" required>
+        <div class="input-icon">
+          <span>📧</span>
+          <input type="email" placeholder="Email" required>
+        </div>
+        <textarea placeholder="Üzenet..." rows="4" required></textarea>
+        <button type="submit" class="btn">Küldés</button>
+      </form>
     </div>
-  </div>
-</section>
+  </section>
+</main>
 
-
-<!-- FOOTER -->
-<main id="main"></main>
 <footer class="footer">
   <p>&copy; 2026 Across-platform | Minden jog fenntartva. | Powered by <a href="https://dev-control.hu">DEV Control</a></p>
 </footer>

@@ -1,35 +1,621 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
+/*
+  CSS style guide for Across-platform
+  - Reordered for clarity: variables -> reset -> layout -> components -> forms -> utilities
+  - Key components: .glass (reusable glassmorphism card), .input-icon (icon + input), .btn
+*/
+
 :root {
-  --bg: #0d1117;
-  --glass-bg: rgba(255,255,255,0.07);
-  --glass-border: rgba(255,255,255,0.2);
-  --text-light: #e1e4e8;
-  --accent: #5ad1e5;
+  /* Keep only variables actually referenced in the stylesheet */
+  --text-dark: #111827;
+  --text-light: #374151;
+  --accent: #ffcdb2; /* pastel peach for light theme */
+  /* Page theming variables (tweak these to change the whole site's look) */
+  /* pale blue background stops for a soft, glossy light theme */
+  --bg-stop-1: #f2fbff;
+  --bg-stop-2: #e6f6ff;
+  --bg-stop-3: #e0f4ff;
+
+  /* Soft glow color and sizes (responsive) */
+  --glow-color: 120, 190, 255; /* rgb parts for reuse */
+  --gloss-alpha: 0.28; /* gloss overlay intensity */
+  --glow-alpha: 0.14;
+  --glow-size: clamp(300px, 28vw, 600px);
+  --glow-blur: clamp(80px, 15vw, 160px);
+  --glow-offset:  -12vw; /* negative pushes partly off-screen */
+  /* Corner radius used across components */
+  --radius: 12px;
 }
 
-* {margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
-body {background:var(--bg);color:var(--text-light);line-height:1.6;}
+/* Dark theme overrides. App toggles `data-theme="dark"` on the <html> element. */
+html[data-theme="dark"] {
+  --bg-stop-1: #07121a;
+  --bg-stop-2: #041024;
+  --bg-stop-3: #021018;
+  --text-dark: #e6eef8;
+  --text-light: #cbd5e1;
+  --accent: #9fd6ff; /* slightly brighter in dark mode */
+  --glow-color: 80, 120, 220;
+  --glow-alpha: 0.09;
+}
 
-.container {width:90%;max-width:1100px;margin:0 auto;}
+/* Reset / base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
 
-.navbar {padding:1rem 0;position:sticky;top:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(10px);}
-.navbar .container {display:flex;justify-content:space-between;align-items:center;}
-.navbar a {margin-left:1rem;color:var(--text-light);text-decoration:none;}
+html {
+  /* page background on html so all pages and tall content use the same gradient
+     and there is no white gap under the page on short documents */
+  /* Original gradient + texture (no white overlay) to support theme switching */
+  background: linear-gradient(135deg, var(--bg-stop-1) 0%, var(--bg-stop-2) 40%, var(--bg-stop-3) 100%),
+              url("/img/texture.svg");
+  background-repeat: repeat, repeat;
+  background-size: cover, 800px 600px;
+  background-blend-mode: overlay, normal;
+  min-height: 100%;
+}
 
-.hero {height:70vh;display:flex;align-items:center;justify-content:center;
-background:linear-gradient(135deg,#0d1117,#16202c);}
-.glass {padding:2rem;border-radius:15px;background:var(--glass-bg);
-border:1px solid var(--glass-border);backdrop-filter:blur(12px);}
+/* glossy sheen overlay for light theme only: sits above the gradient but
+   under page content to create a soft glossy look. Disabled in dark mode. */
+html:not([data-theme='dark'])::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1; /* above the html background but below content (content is z-index: auto/0) */
+  background: linear-gradient(120deg, rgba(255,255,255,var(--gloss-alpha)) 0%, rgba(255,255,255,0.06) 40%, rgba(255,255,255,0) 60%);
+  transform: skewY(-6deg) translateY(-6%);
+  opacity: 0.95;
+  mix-blend-mode: overlay;
+}
 
-.section {padding:4rem 0;}
-h2 {text-align:center;margin-bottom:2rem;font-size:2rem;}
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: transparent; /* inherit visual from html */
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  /* preserve header/footer spacing */
+  padding-top: 72px;
+  padding-bottom: 80px;
+  color: var(--text-dark);
+  line-height: 1.6;
+}
 
-.cards {display:grid;gap:1.5rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
-.card {padding:1.5rem;border-radius:12px;}
+/* Use flex layout so footer sits at the bottom when content is short
+   but follows the document flow when content is long (no bouncing). */
+html, body {
+  height: 100%;
+}
+body {
+  display: flex;
+  flex-direction: column;
+}
 
-input,textarea {padding:0.8rem;border:none;border-radius:8px;background:#16202c;color:var(--text-light);}
-.btn {background:var(--accent);color:#000;padding:0.8rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;}
-.btn:hover {opacity:0.85;}
+main { flex: 1 0 auto; }
 
-.footer {text-align:center;padding:1rem;background:#010409;font-size:0.9rem;}
+/* Soft calming glow behind the page */
+body::before,
+body::after {
+  content: "";
+  position: absolute;
+  width: var(--glow-size);
+  height: var(--glow-size);
+  background: rgba(var(--glow-color), var(--glow-alpha));
+  border-radius: 50%;
+  filter: blur(var(--glow-blur));
+  z-index: -2; /* behind all content */
+  pointer-events: none;
+}
+
+body::before {
+  top: calc(var(--glow-offset));
+  left: calc(var(--glow-offset));
+}
+
+body::after {
+  bottom: calc(var(--glow-offset));
+  right: calc(var(--glow-offset));
+}
+
+.container {
+  width: 90%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Layout */
+.navbar {
+  padding: 0.9rem 0;
+  position: fixed; /* keep header fixed at top */
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+  background: rgba(2,6,23,0.50); /* less opaque so background shows through */
+  backdrop-filter: blur(10px);
+  z-index: 1100; /* ensure navbar stays above cards/hero while scrolling */
+}
+.navbar .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.navbar a {
+  margin-left: 1rem;
+  color: #ffffff; /* ensure menu text and logo are visible on the dark header */
+  text-decoration: none;
+}
+
+.navbar .logo {
+  margin-left: 0; /* logo sits at the left edge of the container */
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* site logo image sizing and link alignment */
+.site-logo {
+  height: 96px; /* larger header logo for better visibility */
+  width: auto;
+  display: block;
+}
+.logo a { display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; color: inherit; }
+
+/* Responsive logo sizing */
+@media (max-width: 880px) {
+  .site-logo { height: 72px; }
+}
+@media (max-width: 640px) {
+  .site-logo { height: 48px; }
+}
+.mobile-nav-icon svg { width: 18px; height: 18px; display: block; fill: currentColor; opacity: 0.95; }
+.mobile-nav-panel a .mobile-nav-icon { color: rgba(2,6,23,0.75); }
+html[data-theme='dark'] .mobile-nav-panel a .mobile-nav-icon { color: rgba(255,255,255,0.86); }
+
+/* slightly smaller icons for special items ($ and @) */
+.mobile-nav-icon.icon--small svg { width: 14px; height: 14px; opacity: 0.95; }
+.mobile-nav-icon.icon--small { flex: 0 0 14px; }
+
+/* Mobile nav: hide the desktop nav and show a slide-in panel */
+nav[role="navigation"], .navbar nav { transition: none; }
+@media (max-width: 880px) {
+  .navbar .container { gap: 0.5rem; }
+  .navbar nav { display: none; }
+  .nav-toggle { display: inline-flex !important; color: #fff; pointer-events: auto; }
+}
+
+/* Slide-in panel */
+.mobile-nav-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 220px; /* narrower panel */
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94));
+  box-shadow: 8px 0 30px rgba(2,6,23,0.3);
+  transform: translateX(-110%);
+  transition: transform 320ms cubic-bezier(.2,.9,.3,1);
+  z-index: 1400;
+  padding: 72px 14px 18px; /* account for fixed header height */
+}
+.mobile-nav-panel a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 12px 0;
+  color: var(--text-dark);
+  font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+.mobile-nav-panel a:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(2,6,23,0.09);
+}
+.mobile-nav-panel a:active { transform: translateY(-1px); }
+.mobile-nav-close { position: absolute; top: 12px; right: 12px; background: transparent; border: none; font-size: 1.4rem; }
+.mobile-nav-panel.open { transform: translateX(0); }
+
+/* Dark theme: make the mobile nav panel darker and invert text colors */
+html[data-theme='dark'] .mobile-nav-panel {
+  background: linear-gradient(180deg, rgba(2,6,23,0.96), rgba(2,6,23,0.90));
+  box-shadow: 8px 0 30px rgba(0,0,0,0.6);
+}
+html[data-theme='dark'] .mobile-nav-panel a { color: var(--text-light); }
+html[data-theme='dark'] .mobile-nav-close { color: var(--text-light); }
+
+/* Dark-mode button appearance */
+html[data-theme='dark'] .mobile-nav-panel a {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+
+/* Icon styling inside mobile nav buttons */
+.mobile-nav-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-nav-icon svg { width: 18px; height: 18px; display: block; fill: currentColor; opacity: 0.95; }
+.mobile-nav-panel a .mobile-nav-icon { color: rgba(2,6,23,0.75); }
+html[data-theme='dark'] .mobile-nav-panel a .mobile-nav-icon { color: rgba(255,255,255,0.86); }
+
+/* overlay that dims the page when mobile nav is open */
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.45);
+  z-index: 1350;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.mobile-nav-overlay.visible { opacity: 1; pointer-events: auto; }
+
+/* hide nav-toggle by default (visible only on small screens) */
+.nav-toggle {
+  display: none;
+  z-index: 1500; /* sit above header content */
+  position: relative;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  padding: 6px 8px;
+}
+
+
+.navbar a:hover { color: var(--accent); }
+
+/* HERO */
+.hero {
+  height: 75vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* make hero transparent so the page-level gradient/glow shows consistently */
+  background: transparent;
+  padding-top: 24px; /* ensure hero content isn't hidden under fixed navbar */
+}
+
+/* Center the content inside the hero glass card */
+.hero, .section.glass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero .glass, .section.glass .container, .section.contact-form .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem; /* breathing room for centered content */
+  width: 100%;
+  max-width: 900px; /* constrain content so it doesn't stretch/wrap on very wide screens */
+}
+
+.hero .glass h2 { margin-bottom: 0.5rem; }
+.hero .glass p { margin-bottom: 1rem; opacity: 0.95; }
+
+/* Ensure hero text is explicitly readable regardless of inheritance */
+.hero .glass, .hero .glass * { color: var(--text-dark); }
+
+/* List-like (stacked) hero style: left-aligned content with vertical button list.
+   Apply by adding `listlike` to the hero: <section class="hero listlike"> */
+/* hero.listlike variant removed from core stylesheet to keep CSS smaller.
+   If you want the stacked hero variant later, re-add a small ruleset or keep
+   a copy in a separate file. */
+
+
+/* Reusable components */
+/* GLASS: main visual card used in hero, cards, contact section */
+.glass {
+  position: relative;
+  padding: 2rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  overflow: visible; /* allow subtle shadows/children overflow if needed */
+  z-index: 5; /* higher so content is clearly above background layers */
+}
+.glass::before {
+  /* glossy diagonal highlight */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0.05));
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 1; /* keep behind children */
+}
+
+/* Ensure inner content sits above the ::before overlay */
+.glass > * { position: relative; z-index: 6; }
+.card { padding: 1.5rem; border-radius: var(--radius); transition: 0.25s ease; }
+.card:hover { transform: translateY(-6px); border-color: var(--accent); box-shadow: 0 10px 25px rgba(59,130,246,0.15); }
+
+/* Improve card visibility on dark theme (some cards were hard to see) */
+html[data-theme="dark"] .card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 8px 30px rgba(2,6,23,0.45);
+  color: var(--text-dark);
+}
+html[data-theme="dark"] .card h3,
+html[data-theme="dark"] .card h4 {
+  color: var(--text-dark);
+}
+
+/* Inputs & buttons */
+input, textarea { padding: 0.8rem; border: none; border-radius: calc(var(--radius) - 4px); background: #16202c; color: var(--text-light); }
+
+.btn {
+  background: var(--accent);
+  color: white;
+  padding: 0.85rem 1.4rem;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(59, 130, 246, 0.25);
+  transition: 0.2s ease;
+}
+.btn:hover { transform: translateY(-2px); opacity: 0.85; }
+
+/* Secondary button: transparent with accent border (used for download links) */
+.btn.secondary { background: transparent; border: 1px solid var(--accent); color: var(--text-dark); }
+.btn.secondary:hover { background: rgba(90,209,229,0.08); }
+
+.footer {
+  /* Fixed footer pinned to the viewport bottom */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 1rem;
+  background: #010409;
+  font-size: 0.9rem;
+  z-index: 1200;
+  color: #ffffff;
+  transition: transform 360ms ease, opacity 360ms ease;
+}
+
+/* Transition helpers for animated visibility (kept for potential use) */
+.footer-hidden { transform: translateY(100%); opacity: 0; }
+.footer-visible { transform: translateY(0); opacity: 1; }
+
+.hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+
+/* Accessibility: visible focus outlines for keyboard users */
+:focus {
+  outline: none;
+}
+:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(var(--glow-color), 0.18);
+  outline-offset: 3px;
+  border-radius: calc(var(--radius) + 2px);
+}
+
+/* Skip-link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 2000;
+  transition: top 160ms ease;
+}
+.skip-link:focus { top: 8px; }
+
+/* Utility: visually-hidden (accessible hidden text) */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Input with icon — used in contact form */
+.input-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 12px 14px;
+  border-radius: calc(var(--radius) + 2px);
+  margin: 12px 0;
+  backdrop-filter: blur(12px);
+}
+.input-icon span { font-size: 18px; opacity: 0.8; }
+.input-icon input { border: none; outline: none; background: transparent; width: 100%; font-size: 15px; color: white; }
+
+/* Theme toggle: iOS-like switch using a thumb and track. Uses aria-pressed
+   for state (true = dark) so JS can remain unchanged. */
+#theme-toggle {
+  margin-left: 0.8rem;
+  width: 52px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-block;
+  position: relative;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: background 220ms ease, border-color 220ms ease;
+  vertical-align: middle;
+}
+#theme-toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(2,6,23,0.35);
+  transition: transform 220ms cubic-bezier(.2,.9,.3,1), background 220ms ease;
+}
+/* pressed = dark mode on — move thumb and color the track with the accent */
+#theme-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: rgba(0,0,0,0.08);
+}
+#theme-toggle[aria-pressed="true"]::after {
+  transform: translateX(22px);
+  background: #fff;
+}
+/* ensure reasonable contrast in dark theme when off */
+html[data-theme="dark"] #theme-toggle {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.08);
+}
+html[data-theme="dark"] #theme-toggle[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: rgba(255,255,255,0.08);
+}
+
+#theme-toggle:focus-visible {
+  outline: 3px solid rgba(var(--glow-color), 0.18);
+  outline-offset: 3px;
+}
+
+form input, form textarea {
+  width: 100%; padding: 14px; margin: 10px 0; border-radius: calc(var(--radius) + 2px);
+  border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.12); color: white;
+  outline: none; font-size: 15px; backdrop-filter: blur(12px);
+}
+form textarea::placeholder, form input::placeholder { color: rgba(255,255,255,0.6); }
+
+.contact-form {
+  background: transparent; /* section wrapper stays neutral */
+}
+/* Support both structures: .contact-form .glass (glass inside contact-form) and
+   .contact-form.glass (single element with both classes). Default to a light
+   card on the light theme and dark card on the dark theme so text remains
+   readable in both modes. */
+.contact-form .glass,
+.contact-form.glass {
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: var(--text-dark);
+  max-width: 900px; /* default contact card width (narrower on other pages) */
+}
+
+/* Make the contact page itself wider so the Kontakt form has more room */
+#contact .contact-form .glass,
+#contact .contact-form.glass {
+  max-width: 1200px;
+}
+
+.contact-form form input,
+.contact-form form textarea {
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: var(--text-dark);
+}
+
+.contact-form .input-icon {
+  background: rgba(255,255,255,0.96);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.contact-form .btn {
+  background: var(--accent);
+  color: white;
+}
+
+/* Dark theme overrides for contact area */
+html[data-theme="dark"] .contact-form .glass,
+html[data-theme="dark"] .contact-form.glass {
+  background: rgba(2,6,23,0.72);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-dark);
+}
+/* Slightly stronger hero card background in dark theme for contrast */
+html[data-theme="dark"] .hero .glass {
+  background: rgba(2,6,23,0.78);
+}
+html[data-theme="dark"] .contact-form form input,
+html[data-theme="dark"] .contact-form form textarea {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text-dark);
+}
+html[data-theme="dark"] .contact-form .input-icon {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Placeholders and input text adapt to theme variables */
+.contact-form form input::placeholder,
+.contact-form form textarea::placeholder,
+.contact-form .input-icon input::placeholder {
+  color: var(--text-light);
+}
+
+/* Fade-in for contact card for nicer UX */
+.contact-form .glass,
+.contact-form.glass {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 420ms ease, transform 420ms ease;
+}
+.contact-form .glass.fade-in,
+.contact-form.glass.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+/* Responsive header adjustments: reduce header height on small screens */
+@media (max-width: 600px) {
+  .navbar { padding: 0.6rem 0; }
+  /* adjust body padding to match the smaller header height */
+  body { padding-top: 56px; }
+  .navbar .logo { font-size: 1.05rem; }
+  .navbar a { margin-left: 0.6rem; font-size: 0.95rem; }
+  .hero { height: 60vh; }
+}
+
+/* On wide screens keep extra bottom padding so sticky footer doesn't cover content */
+@media (min-width: 1024px) {
+  body { padding-bottom: 100px; }
+}
