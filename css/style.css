@@ -197,12 +197,33 @@ html[data-theme='dark'] .site-logo {
 /* Mobile nav: hide the desktop nav and show a slide-in panel */
 nav[role="navigation"], .navbar nav { transition: none; }
 @media (max-width: 880px) {
-  .navbar .container { gap: 0.5rem; }
+  .navbar .container {
+    gap: 0.5rem;
+    position: relative;
+    justify-content: space-between;
+    min-height: 48px;
+  }
   .navbar nav { display: none; }
   body { padding-top: 64px; }
   .hero { height: calc(100vh - 64px); }
   .mobile-nav-panel { padding: 64px 14px 18px; }
   .nav-toggle { display: inline-flex !important; color: #fff; pointer-events: auto; }
+  .navbar .logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+  }
+  .nav-toggle {
+    margin-right: auto;
+    margin-left: 0;
+    z-index: 1501;
+  }
+  #theme-toggle {
+    margin-left: auto;
+    margin-right: 0;
+    z-index: 1501;
+  }
 }
 
 /* Slide-in panel */
