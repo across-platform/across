@@ -16,7 +16,7 @@
   <div class="container">
   <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
-    <nav>
+    <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
       <a href="services.html">Szolgáltatások</a>
       <a href="portfolio.html">Portfólió</a>
@@ -34,12 +34,15 @@
       <h2>Kapcsolat</h2>
 
       <form>
-        <input type="text" placeholder="Név" required>
+        <label class="sr-only" for="name">Név</label>
+        <input id="name" name="name" autocomplete="name" type="text" placeholder="Név" required>
         <div class="input-icon">
           <span>📧</span>
-          <input type="email" placeholder="Email" required>
+          <label class="sr-only" for="email">Email</label>
+          <input id="email" name="email" autocomplete="email" type="email" placeholder="Email" required>
         </div>
-        <textarea placeholder="Üzenet..." rows="4" required></textarea>
+        <label class="sr-only" for="message">Üzenet</label>
+        <textarea id="message" name="message" placeholder="Üzenet..." rows="4" required></textarea>
         <button type="submit" class="btn">Küldés</button>
       </form>
     </div>

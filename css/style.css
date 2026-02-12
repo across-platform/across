@@ -10,15 +10,15 @@
   /* Keep only variables actually referenced in the stylesheet */
   --text-dark: #111827;
   --text-light: #374151;
-  --accent: #ffcdb2; /* pastel peach for light theme */
+  --accent: #8fa7ff; /* soft brand-like periwinkle for light theme */
   /* Page theming variables (tweak these to change the whole site's look) */
   /* pale blue background stops for a soft, glossy light theme */
-  --bg-stop-1: #f2fbff;
-  --bg-stop-2: #e6f6ff;
-  --bg-stop-3: #e0f4ff;
+  --bg-stop-1: #f6f9ff;
+  --bg-stop-2: #eef4ff;
+  --bg-stop-3: #e8f1ff;
 
   /* Soft glow color and sizes (responsive) */
-  --glow-color: 120, 190, 255; /* rgb parts for reuse */
+  --glow-color: 143, 167, 255; /* rgb parts for reuse */
   --gloss-alpha: 0.28; /* gloss overlay intensity */
   --glow-alpha: 0.14;
   --glow-size: clamp(300px, 28vw, 600px);
@@ -35,7 +35,7 @@ html[data-theme="dark"] {
   --bg-stop-3: #021018;
   --text-dark: #e6eef8;
   --text-light: #cbd5e1;
-  --accent: #9fd6ff; /* slightly brighter in dark mode */
+  --accent: #9fa7ff; /* slightly brighter in dark mode */
   --glow-color: 80, 120, 220;
   --glow-alpha: 0.09;
 }
@@ -132,7 +132,7 @@ body::after {
 
 /* Layout */
 .navbar {
-  padding: 0.9rem 0;
+  padding: 0.5rem 0;
   position: fixed; /* keep header fixed at top */
   left: 0;
   right: 0;
@@ -161,32 +161,35 @@ body::after {
 
 /* site logo image sizing and link alignment */
 .site-logo {
-  height: 96px; /* larger header logo for better visibility */
+  height: 76px; /* larger logo for better brand presence */
   width: auto;
   display: block;
+}
+
+/* Improve logo legibility on dark header backgrounds */
+html[data-theme='dark'] .site-logo {
+  filter: brightness(1.2) contrast(1.22)
+          drop-shadow(0 0 8px rgba(255,255,255,0.24))
+          drop-shadow(0 0 18px rgba(159,167,255,0.22));
 }
 .logo a { display: inline-flex; align-items: center; gap: 0.6rem; text-decoration: none; color: inherit; }
 
 /* Responsive logo sizing */
 @media (max-width: 880px) {
-  .site-logo { height: 72px; }
+  .navbar { padding: 0.45rem 0; }
+  .site-logo { height: 60px; }
 }
 @media (max-width: 640px) {
   .site-logo { height: 48px; }
 }
-.mobile-nav-icon svg { width: 18px; height: 18px; display: block; fill: currentColor; opacity: 0.95; }
-.mobile-nav-panel a .mobile-nav-icon { color: rgba(2,6,23,0.75); }
-html[data-theme='dark'] .mobile-nav-panel a .mobile-nav-icon { color: rgba(255,255,255,0.86); }
-
-/* slightly smaller icons for special items ($ and @) */
-.mobile-nav-icon.icon--small svg { width: 14px; height: 14px; opacity: 0.95; }
-.mobile-nav-icon.icon--small { flex: 0 0 14px; }
-
 /* Mobile nav: hide the desktop nav and show a slide-in panel */
 nav[role="navigation"], .navbar nav { transition: none; }
 @media (max-width: 880px) {
   .navbar .container { gap: 0.5rem; }
   .navbar nav { display: none; }
+  body { padding-top: 64px; }
+  .hero { height: calc(100vh - 64px); }
+  .mobile-nav-panel { padding: 64px 14px 18px; }
   .nav-toggle { display: inline-flex !important; color: #fff; pointer-events: auto; }
 }
 
@@ -207,11 +210,13 @@ nav[role="navigation"], .navbar nav { transition: none; }
 .mobile-nav-panel a {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin: 12px 0;
+  gap: 0.7rem;
+  margin: 10px 0;
   color: var(--text-dark);
   font-weight: 700;
-  padding: 10px 12px;
+  font-size: 0.97rem;
+  line-height: 1.2;
+  padding: 11px 12px;
   border-radius: 10px;
   background: rgba(255,255,255,0.92);
   border: 1px solid rgba(0,0,0,0.06);
@@ -245,13 +250,14 @@ html[data-theme='dark'] .mobile-nav-panel a {
 /* Icon styling inside mobile nav buttons */
 .mobile-nav-icon {
   display: inline-flex;
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
   align-items: center;
   justify-content: center;
+  margin-top: -1px;
 }
-.mobile-nav-icon svg { width: 18px; height: 18px; display: block; fill: currentColor; opacity: 0.95; }
+.mobile-nav-icon svg { width: 20px; height: 20px; display: block; fill: currentColor; opacity: 0.98; }
 .mobile-nav-panel a .mobile-nav-icon { color: rgba(2,6,23,0.75); }
 html[data-theme='dark'] .mobile-nav-panel a .mobile-nav-icon { color: rgba(255,255,255,0.86); }
 
@@ -284,13 +290,13 @@ html[data-theme='dark'] .mobile-nav-panel a .mobile-nav-icon { color: rgba(255,2
 
 /* HERO */
 .hero {
-  height: 75vh;
+  height: calc(100vh - 72px);
   display: flex;
   align-items: center;
   justify-content: center;
   /* make hero transparent so the page-level gradient/glow shows consistently */
   background: transparent;
-  padding-top: 24px; /* ensure hero content isn't hidden under fixed navbar */
+  padding-top: 0; /* padding-top no longer needed with calc() adjustment */
 }
 
 /* Center the content inside the hero glass card */
@@ -316,6 +322,61 @@ html[data-theme='dark'] .mobile-nav-panel a .mobile-nav-icon { color: rgba(255,2
 
 /* Ensure hero text is explicitly readable regardless of inheritance */
 .hero .glass, .hero .glass * { color: var(--text-dark); }
+
+/* Section rhythm and heading scale for inner pages */
+.section {
+  width: 100%;
+  padding: clamp(2.5rem, 5vw, 4.5rem) 0;
+}
+
+.section h2 {
+  font-size: clamp(1.8rem, 2.8vw, 2.4rem);
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.section p {
+  color: var(--text-light);
+}
+
+/* Card grids used on services/portfolio/pricing pages */
+.cards {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  text-align: left;
+}
+
+.card h3,
+.card h4 {
+  line-height: 1.25;
+}
+
+.price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0.2rem 0 0.4rem;
+}
+
+.featured {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+html[data-theme="dark"] .price {
+  color: var(--text-dark);
+}
 
 /* List-like (stacked) hero style: left-aligned content with vertical button list.
    Apply by adding `listlike` to the hero: <section class="hero listlike"> */
@@ -387,7 +448,18 @@ input, textarea { padding: 0.8rem; border: none; border-radius: calc(var(--radiu
 
 /* Secondary button: transparent with accent border (used for download links) */
 .btn.secondary { background: transparent; border: 1px solid var(--accent); color: var(--text-dark); }
-.btn.secondary:hover { background: rgba(90,209,229,0.08); }
+.btn.secondary:hover { background: rgba(143,167,255,0.12); }
+
+/* In light mode keep content links slightly less saturated than button accents */
+html:not([data-theme='dark']) main a:not(.btn),
+html:not([data-theme='dark']) .footer a {
+  color: #6d7dc8;
+}
+
+html:not([data-theme='dark']) main a:not(.btn):hover,
+html:not([data-theme='dark']) .footer a:hover {
+  color: #5d6fbb;
+}
 
 .footer {
   /* Fixed footer pinned to the viewport bottom */
@@ -406,6 +478,16 @@ input, textarea { padding: 0.8rem; border: none; border-radius: calc(var(--radiu
   z-index: 1200;
   color: #ffffff;
   transition: transform 360ms ease, opacity 360ms ease;
+}
+
+.footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  opacity: 0.9;
+  text-decoration: underline;
 }
 
 /* Transition helpers for animated visibility (kept for potential use) */
@@ -607,12 +689,38 @@ html[data-theme="dark"] .contact-form .input-icon {
 
 /* Responsive header adjustments: reduce header height on small screens */
 @media (max-width: 600px) {
-  .navbar { padding: 0.6rem 0; }
+  .navbar { padding: 0.38rem 0; }
   /* adjust body padding to match the smaller header height */
-  body { padding-top: 56px; }
+  body { padding-top: 58px; }
+  .mobile-nav-panel { padding: 58px 14px 18px; }
   .navbar .logo { font-size: 1.05rem; }
   .navbar a { margin-left: 0.6rem; font-size: 0.95rem; }
-  .hero { height: 60vh; }
+  .hero { height: calc(100vh - 58px); }
+  .hero-buttons {
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .hero-buttons .btn {
+    width: min(100%, 320px);
+  }
+}
+
+@media (max-width: 980px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .section.contact-form .container,
+  .hero .glass {
+    padding: 1.5rem;
+  }
 }
 
 /* On wide screens keep extra bottom padding so sticky footer doesn't cover content */

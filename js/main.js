@@ -86,12 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
 					return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M21 3H3v18h18V3zM8 8h8v2H8V8zm0 4h8v6H8v-6z"/></svg>';
 				}
 				if (key.includes('pricing') || key.includes('árak')) {
-					// price tag style SVG with a dollar path for crispness
-					return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M21 10v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h8l6 5z" fill="currentColor" opacity="0.12"/><path d="M10.5 7.5c0-1.1.9-2 2-2s2 .9 2 2c0 .8-.5 1.5-1.2 1.8-.8.3-1.3.9-1.3 1.7 0 1.1.9 2 2 2s2-.9 2-2" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+					return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h12.6a1.5 1.5 0 0 1 1.06.44l2.4 2.4a1.5 1.5 0 0 1 0 2.12l-7.6 7.6a1.5 1.5 0 0 1-1.06.44H4.5A1.5 1.5 0 0 1 3 18.5v-10z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/></svg>';
 				}
 				if (key.includes('contact') || key.includes('kapcsolat')) {
-					// at-sign icon drawn as path for consistent rendering
-					return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M12 2a10 10 0 1 0 9.95 9H20a8 8 0 1 1-8-8v0.5a3.5 3.5 0 1 0 .5 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.5 12a3.5 3.5 0 1 1-3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+					return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 7l7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 				}
 				// default: envelope
 				return '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M2 4h20v16H2V4zm10 8L4 6h16l-8 6z"/></svg>';
@@ -105,10 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				const iconWrapper = document.createElement('span');
 				iconWrapper.className = 'mobile-nav-icon';
 				iconWrapper.innerHTML = getIconSVG(key);
-				// make $ and @ icons slightly smaller for visual balance
-				if (key.includes('árak') || key.includes('pricing') || key.includes('kap') || key.includes('kapcsolat') || key.includes('contact')) {
-					iconWrapper.classList.add('icon--small');
-				}
 				a.prepend(iconWrapper);
 				a.addEventListener('click', () => closePanel());
 			});
