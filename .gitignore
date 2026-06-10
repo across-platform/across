@@ -2,3 +2,4 @@ node_modules/
 .env
 data/users.json
 data/tasks.json
+.DS_Store
