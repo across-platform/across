@@ -14,7 +14,7 @@
   <a class="skip-link" href="#main">Ugrás a tartalomra</a>
 <header class="navbar">
   <div class="container">
-  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+  <h1 class="logo"><a href="index.html"><img src="img/across-logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
@@ -22,10 +22,13 @@
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
-      <a href="admin.html">Admin</a>
+      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="account-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
+      🔔
+      <span id="account-notify-badge" class="notification-badge" hidden>0</span>
+    </button>
     <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
   </div>
 </header>
@@ -43,7 +46,6 @@
         <div class="auth-tabs" role="tablist" aria-label="Hitelesítés mód választása">
           <button type="button" class="btn secondary auth-tab is-active" data-auth-tab="login" role="tab" aria-selected="true" aria-controls="auth-login-panel" id="auth-login-tab">Bejelentkezés</button>
           <button type="button" class="btn secondary auth-tab" data-auth-tab="register" role="tab" aria-selected="false" aria-controls="auth-register-panel" id="auth-register-tab">Regisztráció</button>
-          <button type="button" class="btn secondary auth-tab" data-auth-tab="recover" role="tab" aria-selected="false" aria-controls="auth-recover-panel" id="auth-recover-tab">Fiók visszaállítás</button>
         </div>
 
         <div class="auth-status" id="auth-status" role="status" aria-live="polite"></div>
@@ -58,32 +60,85 @@
             <button id="account-logout" type="button" class="btn secondary">Kijelentkezés</button>
           </div>
 
-          <div class="account-menu" aria-label="Fiók menüpontok">
-            <a href="#account-overview" class="btn secondary">Áttekintés</a>
-            <a href="#subscription" class="btn secondary account-subscription-link">Előfizetésem</a>
-            <a href="#support-history" class="btn secondary">Előzmények</a>
-            <a href="contact.html" class="btn secondary">Új segítségkérés</a>
+          <div class="account-menu" role="tablist" aria-label="Fiók menüpontok">
+            <button type="button" class="btn secondary account-nav-btn is-active" data-account-view="profile">Adatlap</button>
+            <button type="button" class="btn secondary account-nav-btn" data-account-view="settings">Beállítások</button>
+            <button type="button" class="btn secondary account-nav-btn" data-account-view="stats">Statisztika</button>
+            <button type="button" class="btn secondary account-nav-btn" data-account-view="worklog">Munkanapló</button>
+            <button type="button" class="btn secondary account-nav-btn account-subscription-link" data-account-view="plans">Csomagok</button>
+            <button type="button" class="btn secondary account-nav-btn" data-account-view="messages">Üzenetek</button>
           </div>
 
-          <div id="account-overview" class="account-stats" aria-label="Fiók összesítő">
-            <div class="account-stat">
-              <span>Megoldott ügyek</span>
-              <strong id="account-solved">-</strong>
-            </div>
-            <div class="account-stat">
-              <span>Átlagos idő</span>
-              <strong id="account-average-time">-</strong>
-            </div>
-            <div class="account-stat">
-              <span>Utolsó segítség</span>
-              <strong id="account-last-help">-</strong>
-            </div>
-          </div>
-
-          <section id="subscription" class="account-panel">
+          <section id="account-profile-view" class="account-view account-panel">
             <div class="panel-heading">
-              <h3>Előfizetésem</h3>
-              <p class="auth-hint">Csomag, státusz, következő megújulás és a csomaghoz tartozó szolgáltatások.</p>
+              <h3>Adatlap</h3>
+            </div>
+            <div class="account-form-grid">
+              <form id="account-profile-form" novalidate>
+                <h4>Alapadatok</h4>
+                <label for="account-profile-name">Név</label>
+                <input id="account-profile-name" name="name" type="text" autocomplete="name" minlength="2" maxlength="80" required>
+                <label for="account-profile-email">Email cím</label>
+                <input id="account-profile-email" name="email" type="email" autocomplete="email" required>
+                <label for="account-profile-current-password">Jelenlegi jelszó email módosításhoz</label>
+                <input id="account-profile-current-password" name="currentPassword" type="password" autocomplete="current-password" placeholder="Csak email változtatásnál szükséges">
+                <button type="submit" class="btn">Adatlap mentése</button>
+              </form>
+              <form id="account-password-form" novalidate>
+                <h4>Jelszó módosítása</h4>
+                <label for="account-current-password">Jelenlegi jelszó</label>
+                <input id="account-current-password" name="currentPassword" type="password" autocomplete="current-password" required>
+                <label for="account-new-password">Új jelszó</label>
+                <input id="account-new-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required>
+                <p class="auth-hint auth-rule">Minimum 12 karakter, kis- és nagybetű, szám és speciális karakter szükséges.</p>
+                <button type="submit" class="btn">Jelszó mentése</button>
+              </form>
+            </div>
+          </section>
+
+          <section id="account-settings-view" class="account-view account-panel" hidden>
+            <div class="panel-heading">
+              <h3>Beállítások</h3>
+            </div>
+            <form id="account-settings-form" class="account-settings-form">
+              <label for="account-theme-mode">Alap téma</label>
+              <select id="account-theme-mode" name="themeMode">
+                <option value="system">Rendszer alapján</option>
+                <option value="dark">Sötét mód</option>
+                <option value="light">Világos mód</option>
+              </select>
+              <p class="auth-hint">A rendszer alapján opció az eszközöd aktuális világos/sötét beállítását követi.</p>
+              <button type="submit" class="btn">Beállítás mentése</button>
+            </form>
+          </section>
+
+          <section id="account-stats-view" class="account-view" hidden>
+            <div id="account-overview" class="account-stats" aria-label="Fiók összesítő">
+              <div class="account-stat">
+                <span>Megoldott ügyek</span>
+                <strong id="account-solved">-</strong>
+              </div>
+              <div class="account-stat">
+                <span>Átlagos idő</span>
+                <strong id="account-average-time">-</strong>
+              </div>
+              <div class="account-stat">
+                <span>Utolsó segítség</span>
+                <strong id="account-last-help">-</strong>
+              </div>
+            </div>
+          </section>
+
+          <section id="account-worklog-view" class="account-view account-panel" hidden>
+            <div class="panel-heading">
+              <h3>Munkanapló</h3>
+            </div>
+            <div id="support-history-list" class="history-list"></div>
+          </section>
+
+          <section id="account-plans-view" class="account-view account-panel" hidden>
+            <div class="panel-heading">
+              <h3>Csomagok</h3>
             </div>
             <div class="subscription-card">
               <div>
@@ -91,17 +146,22 @@
                 <h4 id="subscription-plan">-</h4>
                 <p id="subscription-renewal" class="auth-hint">-</p>
               </div>
-              <a href="pricing.html" class="btn">Csomag módosítása</a>
             </div>
             <ul id="subscription-features" class="account-feature-list"></ul>
+            <div id="account-plan-options" class="account-plan-options"></div>
+            <div id="account-plan-requests" class="history-list"></div>
           </section>
 
-          <section id="support-history" class="account-panel">
+          <section id="account-messages-view" class="account-view account-panel" hidden>
             <div class="panel-heading">
-              <h3>Előzmények</h3>
-              <p class="auth-hint">Korábbi segítségkérések: mikor történt, ki segített, sikeres volt-e, és mennyi időt vett igénybe.</p>
+              <h3>Üzenetek</h3>
             </div>
-            <div id="support-history-list" class="history-list"></div>
+            <div id="account-message-list" class="message-list"></div>
+            <form id="account-message-form" class="auth-subpanel" novalidate>
+              <label for="account-message-body">Új üzenet</label>
+              <textarea id="account-message-body" name="message" rows="4" required placeholder="Írd le, miben segíthetünk."></textarea>
+              <button type="submit" class="btn">Üzenet küldése</button>
+            </form>
           </section>
         </div>
 
@@ -172,33 +232,6 @@
           </form>
         </div>
 
-        <div id="auth-recover-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-recover-tab" hidden>
-          <div class="panel-heading">
-            <h3>Fiók visszaállítása</h3>
-            <p class="auth-hint">Kérj visszaállító tokent az email címedre, majd add meg itt az új jelszót. Fejlesztői módban a token megjelenik a felületen.</p>
-          </div>
-
-          <form id="recover-request-form" novalidate>
-            <h4>1. Token kérése</h4>
-            <label for="recover-email">Email cím</label>
-            <input id="recover-email" name="email" type="email" autocomplete="email" required placeholder="pelda@email.hu">
-            <button type="submit" class="btn">Visszaállító token kérése</button>
-          </form>
-
-          <form id="recover-apply-form" class="auth-subpanel" novalidate>
-            <h4>2. Új jelszó beállítása</h4>
-            <label for="recover-email-apply">Email cím</label>
-            <input id="recover-email-apply" name="email" type="email" autocomplete="email" required placeholder="pelda@email.hu">
-
-            <label for="recover-token">Visszaállító token</label>
-            <input id="recover-token" name="token" type="text" required placeholder="Token">
-
-            <label for="recover-password">Új jelszó</label>
-            <input id="recover-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required placeholder="Új erős jelszó">
-
-            <button type="submit" class="btn">Fiók visszaállítása</button>
-          </form>
-        </div>
       </div>
     </div>
   </section>

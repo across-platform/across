@@ -14,7 +14,7 @@
   <a class="skip-link" href="#main">Ugrás a tartalomra</a>
 <header class="navbar">
   <div class="container">
-  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+  <h1 class="logo"><a href="index.html"><img src="img/across-logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
@@ -22,37 +22,64 @@
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
-      <a href="admin.html">Admin</a>
+      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="global-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
+      🔔
+      <span id="global-notify-badge" class="notification-badge" hidden>0</span>
+    </button>
     <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
   </div>
 </header>
 
 <main id="main">
   <section id="pricing" class="section contact-form">
-    <div class="container">
-      <h2>Árak</h2>
+    <div class="container section-shell">
+      <div class="section-heading">
+        <p class="section-kicker">Árak</p>
+        <h2>Egyszerű csomagok alkalmi és rendszeres támogatáshoz.</h2>
+        <p>Válassz gyors eseti segítséget vagy olyan csomagot, amelynél a támogatás előzményei is szépen követhetők.</p>
+      </div>
 
       <div class="cards">
         <div class="card glass">
           <h3>Basic</h3>
           <p class="price">5 000 Ft</p>
           <p>Gyors segítség egyszerű problémákra.</p>
+          <ul class="plan-list">
+            <li>Rövid távoli hibakeresés</li>
+            <li>Alap összefoglaló</li>
+          </ul>
         </div>
 
         <div class="card glass featured">
           <h3>Pro</h3>
           <p class="price">10 000 Ft</p>
           <p>Teljes hibaelhárítás + beállítások.</p>
+          <ul class="plan-list">
+            <li>Részletes távoli támogatás</li>
+            <li>Előzmények a saját fiókban</li>
+          </ul>
         </div>
 
         <div class="card glass">
           <h3>Business</h3>
           <p class="price">20 000 Ft</p>
           <p>Kis cégeknek, rendszeres támogatással.</p>
+          <ul class="plan-list">
+            <li>Prioritásos ügyintézés</li>
+            <li>Adminisztrált munkalapok</li>
+          </ul>
         </div>
+      </div>
+
+      <div class="pricing-note glass">
+        <div>
+          <h3>Nem tudod, melyik illik hozzád?</h3>
+          <p>Írd le röviden a problémát, és segítünk kiválasztani a megfelelő támogatási formát.</p>
+        </div>
+        <a href="contact.html" class="btn">Ajánlatot kérek</a>
       </div>
     </div>
   </section>

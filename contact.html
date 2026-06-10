@@ -14,7 +14,7 @@
   <a class="skip-link" href="#main">Ugrás a tartalomra</a>
 <header class="navbar">
   <div class="container">
-  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+  <h1 class="logo"><a href="index.html"><img src="img/across-logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
@@ -22,30 +22,39 @@
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
-      <a href="admin.html">Admin</a>
+      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="global-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
+      🔔
+      <span id="global-notify-badge" class="notification-badge" hidden>0</span>
+    </button>
     <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
   </div>
 </header>
 
 <main id="main">
   <section id="contact" class="section contact-form">
-    <div class="container">
-      <h2>Kapcsolat</h2>
-
-      <form id="contact-form" data-contact-email="info@across-platform.hu">
-        <label class="sr-only" for="name">Név</label>
-        <input id="name" name="name" autocomplete="name" type="text" placeholder="Név" required>
-        <div class="input-icon">
-          <span>📧</span>
-          <label class="sr-only" for="email">Email</label>
-          <input id="email" name="email" autocomplete="email" type="email" placeholder="Email" required>
+    <div class="container contact-grid">
+      <div class="glass contact-copy">
+        <p class="section-kicker">Kapcsolat</p>
+        <h2>Írd le, hol akadtál el.</h2>
+        <p>Röviden felmérjük a problémát, majd javaslunk egy következő lépést. Távoli támogatásnál AnyDesk vagy TeamViewer is használható.</p>
+        <div class="contact-points">
+          <span>Gyors visszajelzés</span>
+          <span>Távoli segítség</span>
+          <span>Követhető előzmények</span>
         </div>
-        <label class="sr-only" for="message">Üzenet</label>
-        <textarea id="message" name="message" placeholder="Üzenet..." rows="4" required></textarea>
-        <button type="submit" class="btn">Küldés</button>
+      </div>
+
+      <form id="contact-form" class="glass" data-contact-email="info@across-platform.hu">
+        <label for="name">Név</label>
+        <input id="name" name="name" autocomplete="name" type="text" placeholder="Teljes név" required>
+        <label for="email">Email</label>
+        <input id="email" name="email" autocomplete="email" type="email" placeholder="pelda@email.hu" required>
+        <label for="message">Üzenet</label>
+        <textarea id="message" name="message" placeholder="Miben segíthetünk?" rows="5" required></textarea>
+        <button type="submit" class="btn">Üzenet küldése</button>
       </form>
     </div>
   </section>

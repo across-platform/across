@@ -1,0 +1,15 @@
+{
+  "requests": [
+    {
+      "id": "b5791c86-20bd-4e26-844f-4117132f9e13",
+      "userId": "ff7f4a36-cd03-4fa0-916d-ebd7294925dd",
+      "currentPlan": "pro",
+      "requestedPlan": "basic",
+      "status": "approved",
+      "note": "",
+      "adminNote": "teszt",
+      "createdAt": "2026-06-10T07:12:00.948Z",
+      "updatedAt": "2026-06-10T07:12:26.786Z"
+    }
+  ]
+}

@@ -14,7 +14,7 @@
   <a class="skip-link" href="#main">Ugrás a tartalomra</a>
 <header class="navbar">
   <div class="container">
-  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+  <h1 class="logo"><a href="index.html"><img src="img/across-logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
@@ -22,34 +22,47 @@
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
-      <a href="admin.html">Admin</a>
+      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="global-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
+      🔔
+      <span id="global-notify-badge" class="notification-badge" hidden>0</span>
+    </button>
     <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
   </div>
 </header>
 
 <main id="main">
   <section id="services" class="section contact-form">
-    <div class="container">
-      <h2>Szolgáltatások</h2>
+    <div class="container section-shell">
+      <div class="section-heading">
+        <p class="section-kicker">Szolgáltatások</p>
+        <h2>Távoli IT segítség érthetően, gyorsan és követhetően.</h2>
+        <p>Magánszemélyeknek és kisvállalkozásoknak segítünk a mindennapi informatikai elakadásokban.</p>
+      </div>
 
       <div class="cards">
         <div class="card glass">
           <h3>Távoli hibaelhárítás</h3>
-          <p>Segítség szoftveres problémák megoldásában, frissítésekben.</p>
+          <p>Szoftverhibák, email gondok, frissítések, lassulás és beállítási problémák megoldása.</p>
         </div>
 
         <div class="card glass">
           <h3>Beállítások és oktatás</h3>
-          <p>Segítünk rendszerek és alkalmazások használatában lépésről lépésre.</p>
+          <p>Új eszközök, alkalmazások és fiókok beállítása, közben érthető magyarázattal.</p>
         </div>
 
         <div class="card glass">
           <h3>Biztonsági támogatás</h3>
-          <p>Vírusvédelem, mentés, adatbiztonság egyszerűen és érthetően.</p>
+          <p>Vírusvédelem, mentés, jelszókezelés és adatbiztonsági alapok egyszerűen.</p>
         </div>
+      </div>
+
+      <div class="process-strip">
+        <div><span>01</span><strong>Leírod a problémát</strong><p>Röviden felmérjük, mire van szükség.</p></div>
+        <div><span>02</span><strong>Távolról segítünk</strong><p>Biztonságos kapcsolaton dolgozunk.</p></div>
+        <div><span>03</span><strong>Rögzítjük az eredményt</strong><p>A feladat megjelenik az előzményeidben.</p></div>
       </div>
     </div>
   </section>

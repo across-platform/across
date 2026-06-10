@@ -14,7 +14,7 @@
   <a class="skip-link" href="#main">Ugrás a tartalomra</a>
 <header class="navbar">
   <div class="container">
-  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+  <h1 class="logo"><a href="index.html"><img src="img/across-logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
@@ -22,10 +22,13 @@
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
-      <a href="admin.html">Admin</a>
+      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="admin-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
+      🔔
+      <span id="admin-notify-badge" class="notification-badge" hidden>0</span>
+    </button>
     <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
   </div>
 </header>
@@ -36,8 +39,8 @@
       <div class="glass auth-card admin-card">
         <div class="auth-heading admin-heading">
           <p class="section-kicker">Adminisztráció</p>
-          <h2>Admin felület</h2>
-          <p class="auth-lead">Felhasználók, hozzáférések és elvégzett támogatási feladatok kezelése egy áttekinthető munkafelületen.</p>
+          <h2>Admin hozzáférés</h2>
+          <p class="auth-lead">A kezelőfelület kizárólag admin jogosultságú belépés után jelenik meg.</p>
         </div>
 
         <div id="admin-status" class="auth-status" role="status" aria-live="polite"></div>
@@ -100,6 +103,8 @@
             <nav class="admin-side-nav" aria-label="Admin menü">
               <button type="button" class="admin-nav-btn is-active" data-admin-view="users">Felhasználók</button>
               <button type="button" class="admin-nav-btn" data-admin-view="tasks">Elvégzett feladatok</button>
+              <button type="button" class="admin-nav-btn" data-admin-view="requests">Csomagkérelmek</button>
+              <button type="button" class="admin-nav-btn" data-admin-view="messages">Üzenetek</button>
             </nav>
 
             <div class="admin-main">
@@ -135,6 +140,7 @@
                       <button id="admin-disable-user" type="button" class="btn secondary">Fiók letiltása</button>
                       <button id="admin-restore-user" type="button" class="btn secondary">Fiók visszaállítása</button>
                       <button id="admin-generate-token" type="button" class="btn secondary">Reset token generálás</button>
+                      <button id="admin-delete-user" type="button" class="btn secondary danger">Fiók törlése</button>
                     </div>
 
                     <p id="admin-token-output" class="auth-hint admin-token-output"></p>
@@ -221,6 +227,53 @@
                       <p class="auth-hint">Kattints egy feladatra a szerkesztéshez.</p>
                     </div>
                     <div id="admin-task-list" class="admin-task-list"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section id="admin-requests-view" class="admin-view" hidden>
+                <div class="admin-toolbar">
+                  <div>
+                    <h3>Csomagkérelmek</h3>
+                    <p class="auth-hint">Ügyfelek csomagmódosítási kérelmei, jóváhagyás és elutasítás egy helyen.</p>
+                  </div>
+                  <button id="admin-refresh-requests" type="button" class="btn secondary">Frissítés</button>
+                </div>
+                <div id="admin-request-list" class="admin-task-list"></div>
+              </section>
+
+              <section id="admin-messages-view" class="admin-view" hidden>
+                <div class="admin-toolbar">
+                  <div>
+                    <h3>Üzenetek</h3>
+                    <p class="auth-hint">Chat-szerű üzenetváltás az ügyfélfiókok és az admin között.</p>
+                  </div>
+                  <button id="admin-refresh-messages" type="button" class="btn secondary">Frissítés</button>
+                </div>
+                <div class="admin-chat-shell">
+                  <aside class="admin-chat-sidebar">
+                    <div class="panel-heading">
+                      <h3>Beszélgetések</h3>
+                      <p class="auth-hint">Az új üzeneteket a harang ikon jelzi.</p>
+                    </div>
+                    <div id="admin-conversation-list" class="admin-conversation-list"></div>
+                  </aside>
+                  <div class="admin-chat-panel">
+                    <div class="admin-chat-header">
+                      <div>
+                        <p class="section-kicker">Aktuális beszélgetés</p>
+                        <strong id="admin-chat-user">Válassz ügyfelet</strong>
+                      </div>
+                      <span id="admin-chat-subtitle" class="auth-hint">A válaszok itt jelennek meg.</span>
+                    </div>
+                    <div id="admin-message-list" class="admin-chat-thread"></div>
+                    <form id="admin-message-form" class="admin-message-form" novalidate>
+                      <label for="admin-message-user">Ügyfél</label>
+                      <select id="admin-message-user" name="userId" required></select>
+                      <label for="admin-message-body">Üzenet</label>
+                      <textarea id="admin-message-body" name="message" rows="4" required placeholder="Írd meg az ügyfélnek szánt választ."></textarea>
+                      <button type="submit" class="btn">Válasz küldése</button>
+                    </form>
                   </div>
                 </div>
               </section>

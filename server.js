@@ -17,9 +17,34 @@ const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, 'data');
 const USERS_DB_PATH = path.join(DATA_DIR, 'users.json');
 const TASKS_DB_PATH = path.join(DATA_DIR, 'tasks.json');
+const PLAN_REQUESTS_DB_PATH = path.join(DATA_DIR, 'plan-requests.json');
+const MESSAGES_DB_PATH = path.join(DATA_DIR, 'messages.json');
 
 const DEV_DEFAULT_ADMIN_EMAIL = 'admin@across-platform.hu';
 const DEV_DEFAULT_ADMIN_PASSWORD = 'Admin!ChangeMe2026';
+const SUPPORT_PLANS = {
+  basic: {
+    key: 'basic',
+    name: 'Basic',
+    price: '5 000 Ft',
+    includedMinutes: 30,
+    features: ['Gyors távoli hibakeresés', 'Alap összefoglaló', 'Email támogatás']
+  },
+  pro: {
+    key: 'pro',
+    name: 'Pro támogatás',
+    price: '10 000 Ft',
+    includedMinutes: 120,
+    features: ['Elsőbbségi időpontok', 'Részletes távoli támogatás', 'Biztonsági ellenőrzés munkamenet után']
+  },
+  business: {
+    key: 'business',
+    name: 'Business',
+    price: 'Egyedi ajánlat',
+    includedMinutes: 300,
+    features: ['Rendszeres karbantartás', 'Prioritásos válaszidő', 'Részletes havi munkanapló']
+  }
+};
 
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
@@ -100,6 +125,7 @@ function userWithDefaults(user) {
     ...user,
     role: user.role || 'user',
     status: user.status || 'active',
+    subscriptionPlan: user.subscriptionPlan || (user.role === 'admin' ? 'pro' : 'pro'),
     mustChangePassword: !!user.mustChangePassword,
     recovery: user.recovery || null
   };
@@ -112,9 +138,15 @@ function publicUser(user) {
     email: user.email,
     role: user.role,
     status: user.status,
+    subscriptionPlan: user.subscriptionPlan || 'pro',
     mustChangePassword: !!user.mustChangePassword,
     createdAt: user.createdAt
   };
+}
+
+function publicPlan(planKey) {
+  const fallback = SUPPORT_PLANS.pro;
+  return SUPPORT_PLANS[planKey] || fallback;
 }
 
 function taskWithDefaults(task) {
@@ -218,6 +250,7 @@ function buildAccountOverview(user, tasks = []) {
   const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
   const renewalDate = new Date(createdAt);
   renewalDate.setMonth(renewalDate.getMonth() + 1);
+  const plan = publicPlan(user.subscriptionPlan);
 
   const userTasks = tasks
     .filter(task => task.userId === user.id)
@@ -233,16 +266,13 @@ function buildAccountOverview(user, tasks = []) {
   return {
     user: publicUser(user),
     subscription: {
-      plan: 'Pro támogatás',
+      plan: plan.name,
+      planKey: plan.key,
       status: 'Aktív',
       renewalDate: renewalDate.toISOString(),
-      includedMinutes: 120,
+      includedMinutes: plan.includedMinutes,
       usedMinutes: history.reduce((sum, item) => sum + item.durationMinutes, 0),
-      features: [
-        'Távoli segítségnyújtás elsőbbségi időpontokkal',
-        'Szoftveres hibaelhárítás és beállítás',
-        'Rövid biztonsági ellenőrzés minden munkamenet után'
-      ]
+      features: plan.features
     },
     stats: {
       solved,
@@ -251,6 +281,31 @@ function buildAccountOverview(user, tasks = []) {
       lastHelpAt: history[0]?.completedAt || history[0]?.date || null
     },
     history
+  };
+}
+
+function planRequestWithDefaults(request) {
+  return {
+    id: request.id || crypto.randomUUID(),
+    userId: request.userId || '',
+    currentPlan: request.currentPlan || 'pro',
+    requestedPlan: request.requestedPlan || 'pro',
+    status: ['pending', 'approved', 'rejected'].includes(request.status) ? request.status : 'pending',
+    note: sanitizeMultiline(request.note || '', 600),
+    adminNote: sanitizeMultiline(request.adminNote || '', 600),
+    createdAt: request.createdAt || new Date().toISOString(),
+    updatedAt: request.updatedAt || request.createdAt || new Date().toISOString()
+  };
+}
+
+function messageWithDefaults(message) {
+  return {
+    id: message.id || crypto.randomUUID(),
+    userId: message.userId || '',
+    senderRole: message.senderRole === 'admin' ? 'admin' : 'user',
+    senderName: sanitizeName(message.senderName || 'Across-platform'),
+    body: sanitizeMultiline(message.body, 1200),
+    createdAt: message.createdAt || new Date().toISOString()
   };
 }
 
@@ -292,6 +347,24 @@ async function ensureTasksDb() {
   }
 }
 
+async function ensurePlanRequestsDb() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.access(PLAN_REQUESTS_DB_PATH);
+  } catch {
+    await fs.writeFile(PLAN_REQUESTS_DB_PATH, JSON.stringify({ requests: [] }, null, 2));
+  }
+}
+
+async function ensureMessagesDb() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.access(MESSAGES_DB_PATH);
+  } catch {
+    await fs.writeFile(MESSAGES_DB_PATH, JSON.stringify({ messages: [] }, null, 2));
+  }
+}
+
 async function readUsers() {
   await ensureUsersDb();
   const raw = await fs.readFile(USERS_DB_PATH, 'utf-8');
@@ -306,12 +379,34 @@ async function readTasks() {
   return Array.isArray(parsed.tasks) ? parsed.tasks.map(taskWithDefaults) : [];
 }
 
+async function readPlanRequests() {
+  await ensurePlanRequestsDb();
+  const raw = await fs.readFile(PLAN_REQUESTS_DB_PATH, 'utf-8');
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.requests) ? parsed.requests.map(planRequestWithDefaults) : [];
+}
+
+async function readMessages() {
+  await ensureMessagesDb();
+  const raw = await fs.readFile(MESSAGES_DB_PATH, 'utf-8');
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.messages) ? parsed.messages.map(messageWithDefaults) : [];
+}
+
 async function writeUsers(users) {
   await fs.writeFile(USERS_DB_PATH, JSON.stringify({ users }, null, 2));
 }
 
 async function writeTasks(tasks) {
   await fs.writeFile(TASKS_DB_PATH, JSON.stringify({ tasks: tasks.map(taskWithDefaults) }, null, 2));
+}
+
+async function writePlanRequests(requests) {
+  await fs.writeFile(PLAN_REQUESTS_DB_PATH, JSON.stringify({ requests: requests.map(planRequestWithDefaults) }, null, 2));
+}
+
+async function writeMessages(messages) {
+  await fs.writeFile(MESSAGES_DB_PATH, JSON.stringify({ messages: messages.map(messageWithDefaults) }, null, 2));
 }
 
 function buildTaskFromRequest(body, existing = null) {
@@ -524,9 +619,124 @@ app.get('/api/account/overview', requireAuth, async (req, res) => {
     if (user.status !== 'active') return res.status(403).json({ error: 'A fiók inaktív.' });
 
     const tasks = await readTasks();
-    return res.status(200).json(buildAccountOverview(user, tasks));
+    const planRequests = (await readPlanRequests())
+      .filter(request => request.userId === user.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return res.status(200).json({
+      ...buildAccountOverview(user, tasks),
+      plans: Object.values(SUPPORT_PLANS),
+      planRequests
+    });
   } catch (error) {
     console.error('account overview error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.put('/api/account/profile', requireAuth, authLimiter, async (req, res) => {
+  try {
+    const name = sanitizeName(req.body?.name);
+    const email = normalizeEmail(req.body?.email);
+    const currentPassword = String(req.body?.currentPassword || '');
+
+    if (!name || name.length < 2) return res.status(400).json({ error: 'Érvénytelen név.' });
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'Érvénytelen email.' });
+
+    const users = (await readUsers()).map(userWithDefaults);
+    const index = users.findIndex(u => u.id === req.session.user.id);
+    if (index < 0) return res.status(404).json({ error: 'Felhasználó nem található.' });
+
+    const emailChanged = users[index].email !== email;
+    if (emailChanged) {
+      if (!currentPassword) return res.status(400).json({ error: 'Email módosításhoz add meg a jelenlegi jelszavad.' });
+      const validPassword = await bcrypt.compare(currentPassword, users[index].passwordHash);
+      if (!validPassword) return res.status(401).json({ error: 'A jelenlegi jelszó hibás.' });
+      if (users.some(user => user.id !== users[index].id && user.email === email)) {
+        return res.status(409).json({ error: 'Ezzel az email címmel már létezik fiók.' });
+      }
+    }
+
+    users[index].name = name;
+    users[index].email = email;
+    users[index].updatedAt = new Date().toISOString();
+    await writeUsers(users);
+
+    req.session.user.name = users[index].name;
+    req.session.user.email = users[index].email;
+    return res.status(200).json({ ok: true, user: publicUser(users[index]), message: 'Adatlap frissítve.' });
+  } catch (error) {
+    console.error('account profile update error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.post('/api/account/plan-requests', requireAuth, async (req, res) => {
+  try {
+    const requestedPlan = sanitizeText(req.body?.plan, 40);
+    const note = sanitizeMultiline(req.body?.note, 600);
+    if (!SUPPORT_PLANS[requestedPlan]) return res.status(400).json({ error: 'Ismeretlen csomag.' });
+
+    const users = (await readUsers()).map(userWithDefaults);
+    const user = users.find(u => u.id === req.session.user.id);
+    if (!user) return res.status(404).json({ error: 'Felhasználó nem található.' });
+    if (user.subscriptionPlan === requestedPlan) return res.status(400).json({ error: 'Ez már az aktív csomagod.' });
+
+    const requests = await readPlanRequests();
+    const hasPending = requests.some(request => request.userId === user.id && request.status === 'pending');
+    if (hasPending) return res.status(409).json({ error: 'Már van folyamatban lévő csomagmódosítási kérelmed.' });
+
+    const now = new Date().toISOString();
+    const request = planRequestWithDefaults({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      currentPlan: user.subscriptionPlan || 'pro',
+      requestedPlan,
+      status: 'pending',
+      note,
+      createdAt: now,
+      updatedAt: now
+    });
+    requests.push(request);
+    await writePlanRequests(requests);
+
+    return res.status(201).json({ ok: true, request, message: 'Csomagmódosítási kérelem elküldve.' });
+  } catch (error) {
+    console.error('account plan request error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.get('/api/account/messages', requireAuth, async (req, res) => {
+  try {
+    const messages = (await readMessages())
+      .filter(message => message.userId === req.session.user.id)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    return res.status(200).json({ messages });
+  } catch (error) {
+    console.error('account messages error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.post('/api/account/messages', requireAuth, async (req, res) => {
+  try {
+    const body = sanitizeMultiline(req.body?.message || req.body?.body, 1200);
+    if (!body || body.length < 2) return res.status(400).json({ error: 'Írj üzenetet.' });
+
+    const message = messageWithDefaults({
+      id: crypto.randomUUID(),
+      userId: req.session.user.id,
+      senderRole: 'user',
+      senderName: req.session.user.name,
+      body,
+      createdAt: new Date().toISOString()
+    });
+    const messages = await readMessages();
+    messages.push(message);
+    await writeMessages(messages);
+    return res.status(201).json({ ok: true, message, notice: 'Üzenet elküldve.' });
+  } catch (error) {
+    console.error('account message send error', error);
     return res.status(500).json({ error: 'Szerverhiba.' });
   }
 });
@@ -628,6 +838,107 @@ app.get('/api/admin/tasks', requireAdmin, async (req, res) => {
     return res.status(200).json({ tasks });
   } catch (error) {
     console.error('admin tasks error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.get('/api/admin/plan-requests', requireAdmin, async (req, res) => {
+  try {
+    const users = (await readUsers()).map(userWithDefaults).map(publicUser);
+    const userById = new Map(users.map(user => [user.id, user]));
+    const requests = (await readPlanRequests())
+      .map(request => ({
+        ...request,
+        currentPlanName: publicPlan(request.currentPlan).name,
+        requestedPlanName: publicPlan(request.requestedPlan).name,
+        userName: userById.get(request.userId)?.name || 'Ismeretlen felhasználó',
+        userEmail: userById.get(request.userId)?.email || ''
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return res.status(200).json({ requests });
+  } catch (error) {
+    console.error('admin plan requests error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.patch('/api/admin/plan-requests/:requestId', requireAdmin, async (req, res) => {
+  try {
+    const requestId = String(req.params.requestId || '');
+    const status = sanitizeText(req.body?.status, 40);
+    const adminNote = sanitizeMultiline(req.body?.adminNote, 600);
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Érvénytelen kérelem státusz.' });
+    }
+
+    const requests = await readPlanRequests();
+    const index = requests.findIndex(request => request.id === requestId);
+    if (index < 0) return res.status(404).json({ error: 'Kérelem nem található.' });
+
+    requests[index].status = status;
+    requests[index].adminNote = adminNote;
+    requests[index].updatedAt = new Date().toISOString();
+
+    if (status === 'approved') {
+      const users = (await readUsers()).map(userWithDefaults);
+      const userIndex = users.findIndex(user => user.id === requests[index].userId);
+      if (userIndex >= 0) {
+        users[userIndex].subscriptionPlan = requests[index].requestedPlan;
+        users[userIndex].updatedAt = new Date().toISOString();
+        await writeUsers(users);
+      }
+    }
+
+    await writePlanRequests(requests);
+    return res.status(200).json({ ok: true, request: requests[index], message: status === 'approved' ? 'Kérelem jóváhagyva.' : 'Kérelem elutasítva.' });
+  } catch (error) {
+    console.error('admin plan request update error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.get('/api/admin/messages', requireAdmin, async (req, res) => {
+  try {
+    const users = (await readUsers()).map(userWithDefaults).map(publicUser);
+    const userById = new Map(users.map(user => [user.id, user]));
+    const messages = (await readMessages())
+      .map(message => ({
+        ...message,
+        userName: userById.get(message.userId)?.name || 'Ismeretlen felhasználó',
+        userEmail: userById.get(message.userId)?.email || ''
+      }))
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    return res.status(200).json({ messages });
+  } catch (error) {
+    console.error('admin messages error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.post('/api/admin/messages', requireAdmin, async (req, res) => {
+  try {
+    const userId = sanitizeText(req.body?.userId, 80);
+    const body = sanitizeMultiline(req.body?.message || req.body?.body, 1200);
+    if (!body || body.length < 2) return res.status(400).json({ error: 'Írj üzenetet.' });
+
+    const users = (await readUsers()).map(userWithDefaults);
+    const user = users.find(item => item.id === userId && item.role !== 'admin');
+    if (!user) return res.status(404).json({ error: 'Felhasználó nem található.' });
+
+    const message = messageWithDefaults({
+      id: crypto.randomUUID(),
+      userId,
+      senderRole: 'admin',
+      senderName: req.session.user.name || 'Admin',
+      body,
+      createdAt: new Date().toISOString()
+    });
+    const messages = await readMessages();
+    messages.push(message);
+    await writeMessages(messages);
+    return res.status(201).json({ ok: true, message, notice: 'Válasz elküldve.' });
+  } catch (error) {
+    console.error('admin message send error', error);
     return res.status(500).json({ error: 'Szerverhiba.' });
   }
 });
@@ -745,6 +1056,48 @@ app.post('/api/admin/users/:userId/disable', requireAdmin, async (req, res) => {
     return res.status(200).json({ ok: true, message: 'Fiók letiltva.' });
   } catch (error) {
     console.error('admin disable error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.delete('/api/admin/users/:userId', requireAdmin, async (req, res) => {
+  try {
+    const userId = String(req.params.userId || '');
+    const users = (await readUsers()).map(userWithDefaults);
+    const index = users.findIndex(u => u.id === userId);
+    if (index < 0) return res.status(404).json({ error: 'Felhasználó nem található.' });
+
+    if (users[index].role === 'admin') {
+      return res.status(400).json({ error: 'Admin fiók nem törölhető ezen a felületen.' });
+    }
+
+    const nextUsers = users.filter(user => user.id !== userId);
+    const tasks = await readTasks();
+    const nextTasks = tasks.filter(task => task.userId !== userId);
+    const planRequests = await readPlanRequests();
+    const nextPlanRequests = planRequests.filter(request => request.userId !== userId);
+    const messages = await readMessages();
+    const nextMessages = messages.filter(message => message.userId !== userId);
+
+    await writeUsers(nextUsers);
+    await writeTasks(nextTasks);
+    await writePlanRequests(nextPlanRequests);
+    await writeMessages(nextMessages);
+
+    const removedTasks = tasks.length - nextTasks.length;
+    const removedRequests = planRequests.length - nextPlanRequests.length;
+    const removedMessages = messages.length - nextMessages.length;
+    const removedDetails = [
+      removedTasks ? `${removedTasks} előzmény` : '',
+      removedRequests ? `${removedRequests} csomagkérelem` : '',
+      removedMessages ? `${removedMessages} üzenet` : ''
+    ].filter(Boolean).join(', ');
+    return res.status(200).json({
+      ok: true,
+      message: removedDetails ? `Fiók törölve, kapcsolódó adatokkal együtt: ${removedDetails}.` : 'Fiók törölve.'
+    });
+  } catch (error) {
+    console.error('admin delete user error', error);
     return res.status(500).json({ error: 'Szerverhiba.' });
   }
 });

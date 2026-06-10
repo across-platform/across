@@ -15,7 +15,7 @@
 
 <header class="navbar">
   <div class="container">
-  <h1 class="logo"><a href="index.html"><img src="img/logo.png" alt="Across-platform" class="site-logo"></a></h1>
+  <h1 class="logo"><a href="index.html"><img src="img/across-logo.png" alt="Across-platform" class="site-logo"></a></h1>
 
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
@@ -23,31 +23,128 @@
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
-      <a href="admin.html">Admin</a>
+      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
+    <button id="global-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
+      🔔
+      <span id="global-notify-badge" class="notification-badge" hidden>0</span>
+    </button>
     <button id="theme-toggle" class="btn secondary" aria-pressed="true" aria-label="Téma váltása" title="Téma váltása"><span class="sr-only">Téma váltása</span></button>
   </div>
 </header>
 
 <main id="main">
-  <!-- HERO -->
-  <section class="hero contact-form">
-    <div class="glass">
-      <h2>Távoli számítógépes segítség egyszerűen</h2>
-      <p>Gyors, barátságos és profi támogatás neked — bármikor, bárhol.</p>
+  <section class="hero hero-concept">
+    <div class="container hero-layout">
+      <div class="hero-copy">
+        <p class="hero-pill">Távoli segítség, valódi megoldás</p>
+        <h2>Technikai problémák? <span>Mi megoldjuk.</span></h2>
+        <p>Távoli számítógépes segítség, weboldal karbantartás és digitális támogatás egy helyen. Gyors segítség otthonra és vállalkozásoknak.</p>
 
-      <div class="hero-buttons">
-        <a href="contact.html" class="btn">Írj nekünk</a>
+        <div class="hero-buttons">
+          <a href="contact.html" class="btn">Ingyenes konzultáció</a>
+          <a href="services.html" class="btn secondary">Szolgáltatások</a>
+        </div>
 
-        <a href="https://anydesk.com/en/downloads" target="_blank" rel="noopener noreferrer" class="btn secondary">
-          AnyDesk letöltés
-        </a>
+        <div class="hero-trust" aria-label="Bizalmi elemek">
+          <div><strong>Gyors válaszidő</strong><span>akár perceken belül</span></div>
+          <div><strong>Biztonságos kapcsolat</strong><span>AnyDesk / TeamViewer</span></div>
+          <div><strong>Követhető előzmények</strong><span>saját ügyfélfiókban</span></div>
+        </div>
+      </div>
 
-        <a href="https://www.teamviewer.com/hu/download/" target="_blank" rel="noopener noreferrer" class="btn secondary">
-          TeamViewer letöltés
-        </a>
+      <div class="status-panel">
+        <div class="status-panel-head">
+          <h3>Kapcsolat állapota</h3>
+          <span>Élő kapcsolat</span>
+        </div>
+        <div class="status-list">
+          <div class="status-row"><span>01</span><div><strong>Távoli kapcsolat létrejött</strong><p>Biztonságos kapcsolat sikeresen létrejött</p></div><em>✓</em></div>
+          <div class="status-row"><span>02</span><div><strong>Probléma azonosítva</strong><p>A hiba forrásának meghatározása megtörtént</p></div><em>✓</em></div>
+          <div class="status-row"><span>03</span><div><strong>Javítás folyamatban</strong><p>Megoldás alkalmazása, kérlek várj</p></div><em>✓</em></div>
+          <div class="status-row solved"><span>04</span><div><strong>Megoldva</strong><p>A probléma sikeresen elhárítva</p></div><em>✓</em></div>
+        </div>
+        <div class="status-footer">
+          <span>Kapcsolat időtartama: 00:18:42</span>
+          <span>Biztonságos kapcsolat</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container section-shell">
+      <div class="section-heading center">
+        <h2>Miért válassz minket?</h2>
+      </div>
+      <div class="cards why-cards">
+        <article class="card"><span class="card-icon">▣</span><h3>Távoli segítség</h3><p>Nem kell szerelőt várnod. Távolról megoldjuk a problémát gyorsan és hatékonyan.</p></article>
+        <article class="card"><span class="card-icon">◎</span><h3>Bárhonnan elérhető</h3><p>Magyarországon és külföldön is segítünk, rugalmas időpontokban.</p></article>
+        <article class="card"><span class="card-icon">↯</span><h3>Gyors reakció</h3><p>Akár perceken belül reagálunk a megkeresésedre.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-muted">
+    <div class="container section-shell">
+      <div class="section-heading center">
+        <h2>Hogyan működik?</h2>
+      </div>
+      <div class="steps">
+        <div><span>1</span><strong>Kapcsolatfelvétel</strong><p>Írj nekünk vagy kérj visszahívást.</p></div>
+        <div><span>2</span><strong>AnyDesk / TeamViewer</strong><p>Biztonságos távoli kapcsolaton keresztül elérjük a géped.</p></div>
+        <div><span>3</span><strong>Hibaelhárítás</strong><p>Megkeressük és kijavítjuk a problémát.</p></div>
+        <div><span>4</span><strong>Megoldás</strong><p>A feladat bekerül az ügyfélfiókod előzményei közé.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container section-shell">
+      <div class="section-heading center">
+        <h2>Szolgáltatásaink</h2>
+      </div>
+      <div class="cards service-grid">
+        <article class="card"><span class="card-icon">▱</span><h3>Távoli segítség</h3><p>Számítógépes hibák elhárítása, rendszerbeállítás, szoftveres problémák megoldása.</p><a href="services.html">Tovább</a></article>
+        <article class="card"><span class="card-icon">&lt;/&gt;</span><h3>Webfejlesztés</h3><p>Modern, reszponzív weboldalak készítése egyéni igények alapján.</p><a href="services.html">Tovább</a></article>
+        <article class="card"><span class="card-icon">▤</span><h3>Weboldal karbantartás</h3><p>Tartalom, hibajavítás, biztonsági frissítések és folyamatos felügyelet.</p><a href="services.html">Tovább</a></article>
+        <article class="card"><span class="card-icon">⚙</span><h3>Rendszerbeállítás</h3><p>Windows, macOS, hálózatok, nyomtatók és egyéb eszközök beállítása.</p><a href="services.html">Tovább</a></article>
+        <article class="card"><span class="card-icon">☁</span><h3>E-mail és felhő</h3><p>E-mail fiókok, felhőalapú megoldások és integrációk beállítása.</p><a href="services.html">Tovább</a></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-muted">
+    <div class="container section-shell">
+      <div class="section-heading center">
+        <h2>Áraink</h2>
+      </div>
+      <div class="cards pricing-preview">
+        <article class="card"><h3>Basic</h3><p class="price">9.990 Ft</p><p>/ 30 perc</p><ul class="plan-list"><li>Távoli segítség</li><li>Általános hibák elhárítása</li><li>E-mail támogatás</li></ul><a class="btn" href="pricing.html">Megrendelem</a></article>
+        <article class="card featured"><h3>Pro</h3><p class="price">17.990 Ft</p><p>/ 60 perc</p><ul class="plan-list"><li>Minden Basic szolgáltatás</li><li>Elsőbbségi támogatás</li><li>Bonyolultabb problémák</li></ul><a class="btn" href="pricing.html">Megrendelem</a></article>
+        <article class="card"><h3>Nagyobb projekthez egyedi ajánlat</h3><p>Webfejlesztéshez, rendszertelepítéshez vagy hosszabb együttműködéshez egyedi ajánlatot készítünk.</p><a class="btn secondary" href="contact.html">Ajánlatot kérek</a></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container section-shell">
+      <div class="section-heading center">
+        <h2>Ügyfeleink mondták</h2>
+      </div>
+      <div class="cards testimonial-grid">
+        <article class="card"><p>“15 perc alatt megoldották azt a problémát, amivel napok óta küzdöttem.”</p><strong>Kovács István</strong><span>★★★★★</span></article>
+        <article class="card"><p>“A weboldalunk sokkal gyorsabb és stabilabb lett. Profi munka, korrekt áron.”</p><strong>Nagy Péter</strong><span>★★★★★</span></article>
+        <article class="card"><p>“Végre valaki normálisan elmagyarázta, mi volt a probléma és mit csinált.”</p><strong>Tóth Anna</strong><span>★★★★★</span></article>
+      </div>
+
+      <div class="final-cta">
+        <div>
+          <h2>Segítségre van szükséged?</h2>
+          <p>Kérj visszahívást még ma, és mi megoldjuk a problémád.</p>
+        </div>
+        <a href="contact.html" class="btn">Kapcsolatfelvétel</a>
       </div>
     </div>
   </section>

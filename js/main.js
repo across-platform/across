@@ -16,10 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Theme switcher: toggles dark/light themes and persists preference
 	const THEME_KEY = 'ap_theme';
+	const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+	function resolveTheme(theme) {
+		if (theme === 'system') return systemThemeQuery.matches ? 'dark' : 'light';
+		return theme === 'light' ? 'light' : 'dark';
+	}
 	function applyTheme(theme) {
 		const html = document.documentElement;
 		const btn = document.getElementById('theme-toggle');
-		if (theme === 'dark') {
+		const resolved = resolveTheme(theme);
+		if (resolved === 'dark') {
 			html.setAttribute('data-theme', 'dark');
 			if (btn) btn.setAttribute('aria-pressed', 'true');
 		} else {
@@ -27,9 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (btn) btn.setAttribute('aria-pressed', 'false');
 		}
 	}
+	function currentStoredTheme() {
+		try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
+	}
 
 	// initialize theme from storage or default to dark
-	const storedTheme = (() => { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }})();
+	const storedTheme = currentStoredTheme();
 	if (storedTheme) {
 		applyTheme(storedTheme);
 	} else {
@@ -46,22 +55,92 @@ document.addEventListener('DOMContentLoaded', () => {
 			try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore storage errors */ }
 		});
 	}
+	const handleSystemThemeChange = () => {
+		if (currentStoredTheme() === 'system') applyTheme('system');
+	};
+	if (typeof systemThemeQuery.addEventListener === 'function') {
+		systemThemeQuery.addEventListener('change', handleSystemThemeChange);
+	} else if (typeof systemThemeQuery.addListener === 'function') {
+		systemThemeQuery.addListener(handleSystemThemeChange);
+	}
 
-	document.querySelectorAll('.navbar nav a[href]').forEach(link => {
-		const href = link.getAttribute('href') || '';
-		if (!href || href.startsWith('http')) return;
+	const isBackendOrigin = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+	function markActiveNav() {
+		document.querySelectorAll('.navbar nav a[href]').forEach(link => {
+			const href = link.getAttribute('href') || '';
+			if (!href || href.startsWith('http')) return;
+			try {
+				const url = new URL(href, window.location.href);
+				const samePage = url.pathname.split('/').pop() === window.location.pathname.split('/').pop();
+				const sameHash = url.hash ? url.hash === window.location.hash : !window.location.hash;
+				link.classList.toggle('is-active', samePage && sameHash);
+			} catch (err) {
+				/* ignore malformed local links */
+			}
+		});
+	}
+
+	async function revealAdminNavIfAllowed() {
+		if (!isBackendOrigin) return;
+		const nav = document.querySelector('.navbar nav');
+		if (!nav || nav.querySelector('[data-admin-nav]')) return;
 		try {
-			const url = new URL(href, window.location.href);
-			const samePage = url.pathname.split('/').pop() === window.location.pathname.split('/').pop();
-			const sameHash = url.hash ? url.hash === window.location.hash : !window.location.hash;
-			link.classList.toggle('is-active', samePage && sameHash);
+			const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.user?.role !== 'admin') return;
+			const adminLink = document.createElement('a');
+			adminLink.href = 'admin.html';
+			adminLink.dataset.adminNav = 'true';
+			adminLink.textContent = 'Admin';
+			nav.appendChild(adminLink);
 		} catch (err) {
-			/* ignore malformed local links */
+			/* anonymous visitors simply do not see the admin link */
 		}
+	}
+
+	async function syncGlobalBellVisibility() {
+		const bell = document.getElementById('global-notify-btn');
+		const badge = document.getElementById('global-notify-badge');
+		if (!bell) return;
+		if (!isBackendOrigin) {
+			bell.hidden = true;
+			bell.style.display = 'none';
+			if (badge) {
+				badge.hidden = true;
+				badge.style.display = 'none';
+			}
+			return;
+		}
+		try {
+			const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+			const payload = await response.json().catch(() => ({}));
+			const isLoggedIn = response.ok && Boolean(payload.user);
+			bell.hidden = !isLoggedIn;
+			bell.style.display = isLoggedIn ? '' : 'none';
+			if (badge) {
+				badge.hidden = true;
+				badge.style.display = 'none';
+			}
+		} catch (err) {
+			bell.hidden = true;
+			bell.style.display = 'none';
+			if (badge) {
+				badge.hidden = true;
+				badge.style.display = 'none';
+			}
+		}
+	}
+
+	markActiveNav();
+	revealAdminNavIfAllowed().finally(() => {
+		markActiveNav();
+		syncGlobalBellVisibility().catch(() => {});
 	});
 
 	// Mobile nav toggle (slide-in panel)
 	const navToggle = document.getElementById('nav-toggle');
+	const mobileNavQuery = window.matchMedia('(max-width: 880px)');
 	let mobilePanel = null;
 	let mobileOverlay = null;
 	let _prevFocused = null;
@@ -70,7 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
 	let _lastFocusable = null;
 	let _trapHandler = null;
 
+	function isMobileNavAllowed() {
+		return mobileNavQuery.matches;
+	}
+
 	function createMobilePanel() {
+		if (!isMobileNavAllowed()) return null;
 		if (mobilePanel) return mobilePanel;
 		// create overlay
 		mobileOverlay = document.createElement('div');
@@ -136,11 +220,16 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function openPanel() {
+		if (!isMobileNavAllowed()) {
+			removeMobilePanel();
+			return;
+		}
 		const panel = createMobilePanel();
+		if (!panel) return;
 		panel.classList.add('open');
 		document.documentElement.style.overflow = 'hidden';
 		if (mobileOverlay) mobileOverlay.classList.add('visible');
-		navToggle.setAttribute('aria-expanded', 'true');
+		if (navToggle) navToggle.setAttribute('aria-expanded', 'true');
 
 		// Focus trap: save previous focus and trap Tab inside the panel
 		try {
@@ -179,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		mobilePanel.classList.remove('open');
 		document.documentElement.style.overflow = '';
 		if (mobileOverlay) mobileOverlay.classList.remove('visible');
-		navToggle.setAttribute('aria-expanded', 'false');
+		if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
 
 		// release focus trap and restore previous focus
 		try {
@@ -193,8 +282,26 @@ document.addEventListener('DOMContentLoaded', () => {
 		} catch (err) { /* ignore */ }
 	}
 
+	function removeMobilePanel() {
+		try { closePanel(); } catch (err) { /* ignore stale mobile nav state */ }
+		if (mobilePanel && mobilePanel.parentNode) {
+			mobilePanel.parentNode.removeChild(mobilePanel);
+		}
+		if (mobileOverlay && mobileOverlay.parentNode) {
+			mobileOverlay.parentNode.removeChild(mobileOverlay);
+		}
+		mobilePanel = null;
+		mobileOverlay = null;
+		document.documentElement.style.overflow = '';
+		if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+	}
+
 	if (navToggle) {
 		navToggle.addEventListener('click', () => {
+			if (!isMobileNavAllowed()) {
+				removeMobilePanel();
+				return;
+			}
 			const expanded = navToggle.getAttribute('aria-expanded') === 'true';
 			if (expanded) closePanel(); else openPanel();
 		});
@@ -207,25 +314,20 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Ensure the UI adapts when resizing the window: if switching back to
 	// desktop width, close and remove the mobile panel to avoid stale state.
 	window.addEventListener('resize', () => {
-		const isDesktop = window.innerWidth > 880;
-		if (isDesktop) {
-			// close panel if open
-			try { if (mobilePanel && mobilePanel.classList.contains('open')) closePanel(); } catch (e) {}
-			// remove the panel DOM so it can be re-created fresh later
-			if (mobilePanel && mobilePanel.parentNode) {
-				mobilePanel.parentNode.removeChild(mobilePanel);
-			}
-			if (mobileOverlay && mobileOverlay.parentNode) {
-				mobileOverlay.parentNode.removeChild(mobileOverlay);
-			}
-			mobilePanel = null;
-			mobileOverlay = null;
-			if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
-		}
+		if (!isMobileNavAllowed()) removeMobilePanel();
 	});
 
+	const handleMobileNavBreakpoint = (event) => {
+		if (!event.matches) removeMobilePanel();
+	};
+	if (typeof mobileNavQuery.addEventListener === 'function') {
+		mobileNavQuery.addEventListener('change', handleMobileNavBreakpoint);
+	} else if (typeof mobileNavQuery.addListener === 'function') {
+		mobileNavQuery.addListener(handleMobileNavBreakpoint);
+	}
+	if (!isMobileNavAllowed()) removeMobilePanel();
+
 	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	const isBackendOrigin = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 
 	function setSubmitDisabled(formEl, disabled) {
 		if (!formEl) return;
@@ -285,15 +387,12 @@ document.addEventListener('DOMContentLoaded', () => {
 		const tabs = authRoot.querySelectorAll('.auth-tab');
 		const panels = {
 			login: document.getElementById('auth-login-panel'),
-			register: document.getElementById('auth-register-panel'),
-			recover: document.getElementById('auth-recover-panel')
+			register: document.getElementById('auth-register-panel')
 		};
 		const authStatus = document.getElementById('auth-status');
 		const loginForm = document.getElementById('login-form');
 		const forcePasswordForm = document.getElementById('force-password-form');
 		const registerForm = document.getElementById('register-form');
-		const recoverRequestForm = document.getElementById('recover-request-form');
-		const recoverApplyForm = document.getElementById('recover-apply-form');
 		const registerPasswordInput = document.getElementById('register-password');
 		const registerPasswordConfirmInput = document.getElementById('register-password-confirm');
 		const passwordHint = document.getElementById('password-hint');
@@ -301,6 +400,19 @@ document.addEventListener('DOMContentLoaded', () => {
 		const accountGreeting = document.getElementById('account-greeting');
 		const accountEmail = document.getElementById('account-email');
 		const accountLogoutBtn = document.getElementById('account-logout');
+		const accountNavBtns = authRoot.querySelectorAll('.account-nav-btn');
+		const accountViews = {
+			profile: document.getElementById('account-profile-view'),
+			settings: document.getElementById('account-settings-view'),
+			stats: document.getElementById('account-stats-view'),
+			worklog: document.getElementById('account-worklog-view'),
+			plans: document.getElementById('account-plans-view'),
+			messages: document.getElementById('account-messages-view')
+		};
+		const accountProfileForm = document.getElementById('account-profile-form');
+		const accountPasswordForm = document.getElementById('account-password-form');
+		const accountSettingsForm = document.getElementById('account-settings-form');
+		const accountThemeMode = document.getElementById('account-theme-mode');
 		const accountSolved = document.getElementById('account-solved');
 		const accountAverageTime = document.getElementById('account-average-time');
 		const accountLastHelp = document.getElementById('account-last-help');
@@ -308,7 +420,17 @@ document.addEventListener('DOMContentLoaded', () => {
 		const subscriptionPlan = document.getElementById('subscription-plan');
 		const subscriptionRenewal = document.getElementById('subscription-renewal');
 		const subscriptionFeatures = document.getElementById('subscription-features');
+		const accountPlanOptions = document.getElementById('account-plan-options');
+		const accountPlanRequests = document.getElementById('account-plan-requests');
 		const supportHistoryList = document.getElementById('support-history-list');
+		const accountMessageList = document.getElementById('account-message-list');
+		const accountMessageForm = document.getElementById('account-message-form');
+		const accountNotifyBtn = document.getElementById('account-notify-btn');
+		const accountNotifyBadge = document.getElementById('account-notify-badge');
+		const navSubscriptionLinks = document.querySelectorAll('.nav-subscription');
+		let latestAccountData = null;
+		let isAccountAuthenticated = false;
+		const ACCOUNT_LAST_SEEN_KEY = 'across-account-last-seen';
 
 		function setAuthStatus(message, tone) {
 			if (!authStatus) return;
@@ -334,13 +456,51 @@ document.addEventListener('DOMContentLoaded', () => {
 			return el;
 		}
 
-		function formatAccountDate(value) {
+		function readAccountLastSeen() {
+			try { return Number(localStorage.getItem(ACCOUNT_LAST_SEEN_KEY) || 0); } catch (err) { return 0; }
+		}
+
+		function writeAccountLastSeen(value) {
+			try { localStorage.setItem(ACCOUNT_LAST_SEEN_KEY, String(value)); } catch (err) { /* ignore */ }
+		}
+
+		function syncSubscriptionNavVisibility() {
+			navSubscriptionLinks.forEach(link => {
+				link.hidden = !isAccountAuthenticated;
+				link.style.display = isAccountAuthenticated ? '' : 'none';
+			});
+		}
+
+		function updateAccountNotifications(messages) {
+			if (!accountNotifyBtn || !accountNotifyBadge) return;
+			const unread = Array.isArray(messages)
+				? messages.filter(message => message.senderRole === 'admin' && new Date(message.createdAt).getTime() > readAccountLastSeen()).length
+				: 0;
+			const showBell = isAccountAuthenticated;
+			const showBubble = showBell && unread > 0;
+			accountNotifyBtn.hidden = !showBell;
+			accountNotifyBtn.style.display = showBell ? '' : 'none';
+			accountNotifyBadge.hidden = !showBubble;
+			accountNotifyBadge.style.display = showBubble ? '' : 'none';
+			accountNotifyBadge.textContent = String(unread);
+		}
+
+		function markAccountMessagesSeen(messages) {
+			const latest = Array.isArray(messages) && messages.length
+				? messages.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+				: null;
+			if (latest) writeAccountLastSeen(new Date(latest.createdAt).getTime());
+			updateAccountNotifications(messages);
+		}
+
+		function formatAccountDate(value, includeTime = false) {
 			if (!value) return 'Nincs adat';
 			try {
 				return new Intl.DateTimeFormat('hu-HU', {
 					year: 'numeric',
 					month: '2-digit',
-					day: '2-digit'
+					day: '2-digit',
+					...(includeTime ? { hour: '2-digit', minute: '2-digit' } : {})
 				}).format(new Date(value));
 			} catch (err) {
 				return 'Nincs adat';
@@ -355,10 +515,30 @@ document.addEventListener('DOMContentLoaded', () => {
 			return rest ? `${hours} óra ${rest} perc` : `${hours} óra`;
 		}
 
+		function planStatusLabel(status) {
+			if (status === 'approved') return 'Jóváhagyva';
+			if (status === 'rejected') return 'Elutasítva';
+			return 'Folyamatban';
+		}
+
 		function toggleForcePasswordForm(show) {
 			if (!forcePasswordForm) return;
 			forcePasswordForm.hidden = !show;
 			if (!show) forcePasswordForm.reset();
+		}
+
+		function setAccountView(viewName) {
+			const next = accountViews[viewName] ? viewName : 'profile';
+			Object.entries(accountViews).forEach(([name, panel]) => {
+				if (panel) panel.hidden = name !== next;
+			});
+			accountNavBtns.forEach(btn => {
+				btn.classList.toggle('is-active', btn.getAttribute('data-account-view') === next);
+			});
+			if (next === 'messages') {
+				loadAccountMessages().catch(() => {});
+				markAccountMessagesSeen(Array.isArray(latestAccountData?.messages) ? latestAccountData.messages : []);
+			}
 		}
 
 		function setAccountMode(mode) {
@@ -376,17 +556,38 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 
-		function renderAccountDashboard(data) {
-			const user = data.user || {};
-			const stats = data.stats || {};
-			const subscription = data.subscription || {};
-			const history = Array.isArray(data.history) ? data.history : [];
+		function renderHistory(history) {
+			if (!supportHistoryList) return;
+			supportHistoryList.innerHTML = '';
+			if (!history.length) {
+				supportHistoryList.appendChild(textEl('p', 'auth-hint', 'Még nincs rögzített munkanapló bejegyzés.'));
+			}
+			history.forEach(item => {
+				const row = document.createElement('article');
+				row.className = 'history-item';
+				const header = document.createElement('div');
+				header.className = 'history-item-header';
+				header.replaceChildren(
+					textEl('strong', '', item.topic || 'Segítségkérés'),
+					textEl('span', item.successful ? 'account-badge is-success' : 'account-badge is-warning', item.result || 'Feldolgozás alatt')
+				);
+				const meta = document.createElement('div');
+				meta.className = 'history-meta';
+				meta.replaceChildren(
+					textEl('span', '', `Mikor: ${formatAccountDate(item.date, true)}`),
+					textEl('span', '', `Segített: ${item.helper || 'Across-platform'}`),
+					textEl('span', '', `Időtartam: ${formatDuration(item.durationMinutes)}`)
+				);
+				row.replaceChildren(header, meta, textEl('p', 'auth-hint', item.note || item.solution || ''));
+				supportHistoryList.appendChild(row);
+			});
+		}
 
-			if (accountGreeting) accountGreeting.textContent = `Szia, ${user.name || 'felhasználó'}!`;
-			if (accountEmail) accountEmail.textContent = user.email || '';
-			if (accountSolved) accountSolved.textContent = `${stats.solved || 0}/${stats.total || history.length}`;
-			if (accountAverageTime) accountAverageTime.textContent = formatDuration(stats.averageMinutes || 0);
-			if (accountLastHelp) accountLastHelp.textContent = formatAccountDate(stats.lastHelpAt || history[0]?.date);
+		function renderPlans(data) {
+			const subscription = data.subscription || {};
+			const plans = Array.isArray(data.plans) ? data.plans : [];
+			const requests = Array.isArray(data.planRequests) ? data.planRequests : [];
+			const activePlan = subscription.planKey || 'pro';
 			if (subscriptionStatus) subscriptionStatus.textContent = subscription.status || 'Nincs aktív csomag';
 			if (subscriptionPlan) subscriptionPlan.textContent = subscription.plan || 'Nincs kiválasztott csomag';
 			if (subscriptionRenewal) {
@@ -394,62 +595,114 @@ document.addEventListener('DOMContentLoaded', () => {
 				const included = subscription.includedMinutes ?? 0;
 				subscriptionRenewal.textContent = `Következő megújulás: ${formatAccountDate(subscription.renewalDate)} · Felhasznált idő: ${used}/${included} perc`;
 			}
-
 			if (subscriptionFeatures) {
 				subscriptionFeatures.innerHTML = '';
-				(subscription.features || []).forEach(feature => {
-					const li = textEl('li', '', feature);
-					subscriptionFeatures.appendChild(li);
+				(subscription.features || []).forEach(feature => subscriptionFeatures.appendChild(textEl('li', '', feature)));
+			}
+			if (accountPlanOptions) {
+				accountPlanOptions.innerHTML = '';
+				const pending = requests.find(request => request.status === 'pending');
+				plans.forEach(plan => {
+					const card = document.createElement('article');
+					card.className = `subscription-card account-plan-card${plan.key === activePlan ? ' is-active' : ''}`;
+					const content = document.createElement('div');
+					content.replaceChildren(
+						textEl('span', 'account-badge', plan.key === activePlan ? 'Aktív csomag' : plan.price),
+						textEl('h4', '', plan.name),
+						textEl('p', 'auth-hint', (plan.features || []).join(' · '))
+					);
+					const btn = textEl('button', plan.key === activePlan ? 'btn secondary' : 'btn', plan.key === activePlan ? 'Aktív' : 'Kérem ezt a csomagot');
+					btn.type = 'button';
+					btn.disabled = plan.key === activePlan || !!pending;
+					btn.addEventListener('click', () => requestPlanChange(plan.key));
+					card.replaceChildren(content, btn);
+					accountPlanOptions.appendChild(card);
 				});
 			}
-
-			if (supportHistoryList) {
-				supportHistoryList.innerHTML = '';
-				if (!history.length) {
-					supportHistoryList.appendChild(textEl('p', 'auth-hint', 'Még nincs rögzített segítségkérés.'));
+			if (accountPlanRequests) {
+				accountPlanRequests.innerHTML = '';
+				if (!requests.length) {
+					accountPlanRequests.appendChild(textEl('p', 'auth-hint', 'Még nincs csomagmódosítási kérelem.'));
 				}
-				history.forEach(item => {
+				requests.forEach(request => {
 					const row = document.createElement('article');
 					row.className = 'history-item';
-
-					const header = document.createElement('div');
-					header.className = 'history-item-header';
-					header.replaceChildren(
-						textEl('strong', '', item.topic || 'Segítségkérés'),
-						textEl('span', item.successful ? 'account-badge is-success' : 'account-badge is-warning', item.result || 'Feldolgozás alatt')
+					row.replaceChildren(
+						textEl('strong', '', `${request.currentPlan} -> ${request.requestedPlan}`),
+						textEl('span', 'account-badge', planStatusLabel(request.status)),
+						textEl('p', 'auth-hint', `${formatAccountDate(request.createdAt, true)}${request.adminNote ? ` · Admin megjegyzés: ${request.adminNote}` : ''}`)
 					);
-
-					const meta = document.createElement('div');
-					meta.className = 'history-meta';
-					meta.replaceChildren(
-						textEl('span', '', `Mikor: ${formatAccountDate(item.date)}`),
-						textEl('span', '', `Segített: ${item.helper || 'Across-platform'}`),
-						textEl('span', '', `Időtartam: ${formatDuration(item.durationMinutes)}`)
-					);
-
-					row.replaceChildren(header, meta, textEl('p', 'auth-hint', item.note || ''));
-					supportHistoryList.appendChild(row);
+					accountPlanRequests.appendChild(row);
 				});
 			}
+		}
 
-			setAccountMode('dashboard');
-			if (window.location.hash) {
-				const targetId = window.location.hash.slice(1);
-				const target = targetId ? document.getElementById(targetId) : null;
-				if (target) setTimeout(() => target.scrollIntoView({ block: 'start' }), 60);
+		syncSubscriptionNavVisibility();
+
+		function renderAccountDashboard(data) {
+			latestAccountData = data;
+			isAccountAuthenticated = true;
+			syncSubscriptionNavVisibility();
+			const user = data.user || {};
+			const stats = data.stats || {};
+			const history = Array.isArray(data.history) ? data.history : [];
+
+			if (accountGreeting) accountGreeting.textContent = `Szia, ${user.name || 'felhasználó'}!`;
+			if (accountEmail) accountEmail.textContent = user.email || '';
+			if (accountProfileForm) {
+				accountProfileForm.elements.name.value = user.name || '';
+				accountProfileForm.elements.email.value = user.email || '';
+				accountProfileForm.elements.currentPassword.value = '';
 			}
+			if (accountThemeMode) accountThemeMode.value = currentStoredTheme();
+			if (accountSolved) accountSolved.textContent = `${stats.solved || 0}/${stats.total || history.length}`;
+			if (accountAverageTime) accountAverageTime.textContent = formatDuration(stats.averageMinutes || 0);
+			if (accountLastHelp) accountLastHelp.textContent = formatAccountDate(stats.lastHelpAt || history[0]?.date);
+			updateAccountNotifications(Array.isArray(data.messages) ? data.messages : []);
+			renderHistory(history);
+			renderPlans(data);
+			setAccountMode('dashboard');
+			const viewFromHash = window.location.hash === '#subscription' ? 'plans' : (window.location.hash || '').replace('#account-', '').replace('#', '');
+			setAccountView(viewFromHash || 'profile');
 		}
 
 		async function loadAccountDashboard(showSuccess) {
 			const { response, payload } = await authApiJson('/api/account/overview');
 			if (!response.ok) {
+				isAccountAuthenticated = false;
+				syncSubscriptionNavVisibility();
+				if (accountNotifyBtn) accountNotifyBtn.hidden = true;
+				if (accountNotifyBadge) accountNotifyBadge.hidden = true;
 				setAccountMode('forms');
 				setAuthStatus(payload.error || 'Jelentkezz be a fiókfelület megnyitásához.', 'error');
 				return false;
 			}
 			renderAccountDashboard(payload);
+			if (accountNotifyBtn) accountNotifyBtn.hidden = false;
 			if (showSuccess) setAuthStatus('Sikeres bejelentkezés.', 'success');
+			loadAccountMessages().catch(() => {});
 			return true;
+		}
+
+		async function loadAccountMessages() {
+			if (!accountMessageList) return;
+			const { response, payload } = await authApiJson('/api/account/messages');
+			if (!response.ok) return;
+			const messages = Array.isArray(payload.messages) ? payload.messages : [];
+			accountMessageList.innerHTML = '';
+			if (!messages.length) accountMessageList.appendChild(textEl('p', 'auth-hint', 'Még nincs üzenetváltás.'));
+			messages.forEach(message => {
+				const item = document.createElement('article');
+				item.className = `message-item ${message.senderRole === 'admin' ? 'is-admin' : 'is-user'}`;
+				item.replaceChildren(
+					textEl('strong', '', `${message.senderName || 'Across-platform'} · ${formatAccountDate(message.createdAt, true)}`),
+					textEl('p', '', message.body || '')
+				);
+				accountMessageList.appendChild(item);
+			});
+			accountMessageList.scrollTop = accountMessageList.scrollHeight;
+			updateAccountNotifications(messages);
+			markAccountMessagesSeen(messages);
 		}
 
 		function switchAuthTab(tabName) {
@@ -458,21 +711,37 @@ document.addEventListener('DOMContentLoaded', () => {
 				btn.classList.toggle('is-active', isActive);
 				btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
 			});
-
 			if (panels.login) panels.login.hidden = tabName !== 'login';
 			if (panels.register) panels.register.hidden = tabName !== 'register';
-			if (panels.recover) panels.recover.hidden = tabName !== 'recover';
 			if (tabName !== 'login') toggleForcePasswordForm(false);
 			setAuthStatus('');
 		}
 
+		async function requestPlanChange(planKey) {
+			const { response, payload } = await authApiJson('/api/account/plan-requests', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ plan: planKey })
+			});
+			if (!response.ok) {
+				setAuthStatus(payload.error || 'A csomagkérelem nem küldhető el.', 'error');
+				return;
+			}
+			setAuthStatus(payload.message || 'Csomagkérelem elküldve.', 'success');
+			await loadAccountDashboard(false);
+			setAccountView('plans');
+		}
+
 		async function bootstrapAccount() {
+			isAccountAuthenticated = false;
+			syncSubscriptionNavVisibility();
 			if (!isBackendOrigin) {
 				setAccountMode('forms');
 				setAuthStatus('A fiókfelülethez a Node szerverről megnyitott oldalt használd.', 'error');
 				return;
 			}
 			await loadAccountDashboard(false);
+			loadAccountMessages().catch(() => {});
 		}
 
 		const mustChangeFlag = new URLSearchParams(window.location.search).get('mustChange');
@@ -490,6 +759,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		});
 
+		accountNavBtns.forEach(btn => {
+			btn.addEventListener('click', () => {
+				setAuthStatus('');
+				setAccountView(btn.getAttribute('data-account-view') || 'profile');
+			});
+		});
+
 		if (registerPasswordInput && passwordHint) {
 			registerPasswordInput.addEventListener('input', () => {
 				const password = registerPasswordInput.value || '';
@@ -501,39 +777,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			registerForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAuthStatus('');
-
 				const name = registerForm.querySelector('input[name="name"]')?.value?.trim() || '';
 				const email = registerForm.querySelector('input[name="email"]')?.value?.trim() || '';
 				const password = registerPasswordInput?.value || '';
 				const passwordConfirm = registerPasswordConfirmInput?.value || '';
 				const acceptTerms = registerForm.querySelector('input[name="acceptTerms"]')?.checked;
 				const honeypot = registerForm.querySelector('input[name="company"]')?.value?.trim() || '';
-
-				if (honeypot) {
-					setAuthStatus('A kérés nem feldolgozható.', 'error');
-					return;
-				}
-				if (!name || name.length < 2) {
-					setAuthStatus('Add meg a teljes neved.', 'error');
-					return;
-				}
-				if (!emailPattern.test(email)) {
-					setAuthStatus('Adj meg érvényes email címet.', 'error');
-					return;
-				}
-				if (!strongPasswordPattern.test(password)) {
-					setAuthStatus('A jelszó nem elég erős (min. 12 karakter, kis- és nagybetű, szám, speciális karakter).', 'error');
-					return;
-				}
-				if (password !== passwordConfirm) {
-					setAuthStatus('A két jelszó nem egyezik.', 'error');
-					return;
-				}
-				if (!acceptTerms) {
-					setAuthStatus('A regisztrációhoz el kell fogadnod a feltételeket.', 'error');
-					return;
-				}
-
+				if (honeypot) return setAuthStatus('A kérés nem feldolgozható.', 'error');
+				if (!name || name.length < 2) return setAuthStatus('Add meg a teljes neved.', 'error');
+				if (!emailPattern.test(email)) return setAuthStatus('Adj meg érvényes email címet.', 'error');
+				if (!strongPasswordPattern.test(password)) return setAuthStatus('A jelszó nem elég erős (min. 12 karakter, kis- és nagybetű, szám, speciális karakter).', 'error');
+				if (password !== passwordConfirm) return setAuthStatus('A két jelszó nem egyezik.', 'error');
+				if (!acceptTerms) return setAuthStatus('A regisztrációhoz el kell fogadnod a feltételeket.', 'error');
 				setSubmitDisabled(registerForm, true);
 				try {
 					const { response, payload } = await authApiJson('/api/auth/register', {
@@ -541,12 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ name, email, password })
 					});
-
-					if (!response.ok) {
-						setAuthStatus(payload.error || 'A regisztráció nem sikerült. Kérlek próbáld újra.', 'error');
-						return;
-					}
-
+					if (!response.ok) return setAuthStatus(payload.error || 'A regisztráció nem sikerült. Kérlek próbáld újra.', 'error');
 					setAuthStatus('Sikeres regisztráció. Most jelentkezz be.', 'success');
 					registerForm.reset();
 					switchAuthTab('login');
@@ -562,20 +812,11 @@ document.addEventListener('DOMContentLoaded', () => {
 			loginForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAuthStatus('');
-
 				const email = loginForm.querySelector('input[name="email"]')?.value?.trim() || '';
 				const password = loginForm.querySelector('input[name="password"]')?.value || '';
 				const remember = !!loginForm.querySelector('input[name="remember"]')?.checked;
-
-				if (!emailPattern.test(email)) {
-					setAuthStatus('Adj meg érvényes email címet.', 'error');
-					return;
-				}
-				if (password.length < 12) {
-					setAuthStatus('A jelszó túl rövid.', 'error');
-					return;
-				}
-
+				if (!emailPattern.test(email)) return setAuthStatus('Adj meg érvényes email címet.', 'error');
+				if (password.length < 12) return setAuthStatus('A jelszó túl rövid.', 'error');
 				setSubmitDisabled(loginForm, true);
 				try {
 					const { response, payload } = await authApiJson('/api/auth/login', {
@@ -583,19 +824,12 @@ document.addEventListener('DOMContentLoaded', () => {
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ email, password, remember })
 					});
-
-					if (!response.ok) {
-						setAuthStatus(payload.error || 'A bejelentkezés sikertelen. Ellenőrizd az adataidat.', 'error');
-						return;
-					}
-
+					if (!response.ok) return setAuthStatus(payload.error || 'A bejelentkezés sikertelen. Ellenőrizd az adataidat.', 'error');
 					if (payload.mustChangePassword) {
 						setAuthStatus('Első belépésnél kötelező a jelszócsere.', 'error');
 						toggleForcePasswordForm(true);
 						return;
 					}
-
-					setAuthStatus('Sikeres bejelentkezés.', 'success');
 					loginForm.reset();
 					toggleForcePasswordForm(false);
 					if (payload.user?.role === 'admin') {
@@ -615,19 +849,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			forcePasswordForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAuthStatus('');
-
 				const currentPassword = forcePasswordForm.querySelector('input[name="currentPassword"]')?.value || '';
 				const newPassword = forcePasswordForm.querySelector('input[name="newPassword"]')?.value || '';
-
-				if (!currentPassword) {
-					setAuthStatus('Add meg a jelenlegi jelszót.', 'error');
-					return;
-				}
-				if (!strongPasswordPattern.test(newPassword)) {
-					setAuthStatus('Az új jelszó nem elég erős.', 'error');
-					return;
-				}
-
+				if (!currentPassword) return setAuthStatus('Add meg a jelenlegi jelszót.', 'error');
+				if (!strongPasswordPattern.test(newPassword)) return setAuthStatus('Az új jelszó nem elég erős.', 'error');
 				setSubmitDisabled(forcePasswordForm, true);
 				try {
 					const { response, payload } = await authApiJson('/api/auth/change-password', {
@@ -635,21 +860,11 @@ document.addEventListener('DOMContentLoaded', () => {
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ currentPassword, newPassword })
 					});
-					if (!response.ok) {
-						setAuthStatus(payload.error || 'A jelszócsere nem sikerült.', 'error');
-						return;
-					}
-
+					if (!response.ok) return setAuthStatus(payload.error || 'A jelszócsere nem sikerült.', 'error');
 					setAuthStatus(payload.message || 'A jelszó sikeresen módosítva.', 'success');
 					toggleForcePasswordForm(false);
 					forcePasswordForm.reset();
-					const meResponse = await fetch('/api/auth/me', { credentials: 'same-origin' });
-					const mePayload = await meResponse.json().catch(() => ({}));
-					if (meResponse.ok && mePayload.user?.role === 'admin') {
-						window.location.href = 'admin.html';
-					} else {
-						await loadAccountDashboard(true);
-					}
+					await loadAccountDashboard(true);
 				} catch (err) {
 					setAuthStatus('A biztonságos szerverkapcsolat most nem érhető el. Kérlek próbáld újra később.', 'error');
 				} finally {
@@ -658,90 +873,110 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
-		if (recoverRequestForm) {
-			recoverRequestForm.addEventListener('submit', async (e) => {
+		if (accountProfileForm) {
+			accountProfileForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAuthStatus('');
-				const email = recoverRequestForm.querySelector('input[name="email"]')?.value?.trim() || '';
-				if (!emailPattern.test(email)) {
-					setAuthStatus('Adj meg érvényes email címet.', 'error');
-					return;
-				}
-
-				setSubmitDisabled(recoverRequestForm, true);
+				const name = accountProfileForm.elements.name.value.trim();
+				const email = accountProfileForm.elements.email.value.trim();
+				const currentPassword = accountProfileForm.elements.currentPassword.value;
+				if (!name || name.length < 2) return setAuthStatus('Add meg a teljes neved.', 'error');
+				if (!emailPattern.test(email)) return setAuthStatus('Adj meg érvényes email címet.', 'error');
+				setSubmitDisabled(accountProfileForm, true);
 				try {
-					const { response, payload } = await authApiJson('/api/auth/request-reset', {
-						method: 'POST',
+					const { response, payload } = await authApiJson('/api/account/profile', {
+						method: 'PUT',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ email })
+						body: JSON.stringify({ name, email, currentPassword })
 					});
-					if (!response.ok) {
-						setAuthStatus(payload.error || 'A visszaállítási kérés nem sikerült.', 'error');
-						return;
-					}
-
-					if (payload.resetToken) {
-						setAuthStatus(`${payload.message} Token: ${payload.resetToken}`, 'success');
-					} else {
-						setAuthStatus(payload.message || 'Ha létezik ilyen fiók, küldtünk visszaállítási lehetőséget.', 'success');
-					}
-					recoverRequestForm.reset();
+					if (!response.ok) return setAuthStatus(payload.error || 'Az adatlap mentése nem sikerült.', 'error');
+					setAuthStatus(payload.message || 'Adatlap mentve.', 'success');
+					await loadAccountDashboard(false);
+					setAccountView('profile');
 				} catch (err) {
-					setAuthStatus('A biztonságos szerverkapcsolat most nem érhető el. Kérlek próbáld újra később.', 'error');
+					setAuthStatus('Az adatlap mentése nem sikerült.', 'error');
 				} finally {
-					setSubmitDisabled(recoverRequestForm, false);
+					setSubmitDisabled(accountProfileForm, false);
 				}
 			});
 		}
 
-		if (recoverApplyForm) {
-			recoverApplyForm.addEventListener('submit', async (e) => {
+		if (accountPasswordForm) {
+			accountPasswordForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAuthStatus('');
-
-				const email = recoverApplyForm.querySelector('input[name="email"]')?.value?.trim() || '';
-				const token = recoverApplyForm.querySelector('input[name="token"]')?.value?.trim() || '';
-				const newPassword = recoverApplyForm.querySelector('input[name="newPassword"]')?.value || '';
-
-				if (!emailPattern.test(email)) {
-					setAuthStatus('Adj meg érvényes email címet.', 'error');
-					return;
-				}
-				if (!token) {
-					setAuthStatus('Add meg a visszaállító tokent.', 'error');
-					return;
-				}
-				if (!strongPasswordPattern.test(newPassword)) {
-					setAuthStatus('Az új jelszó nem elég erős.', 'error');
-					return;
-				}
-
-				setSubmitDisabled(recoverApplyForm, true);
+				const currentPassword = accountPasswordForm.elements.currentPassword.value;
+				const newPassword = accountPasswordForm.elements.newPassword.value;
+				if (!currentPassword) return setAuthStatus('Add meg a jelenlegi jelszót.', 'error');
+				if (!strongPasswordPattern.test(newPassword)) return setAuthStatus('Az új jelszó nem elég erős.', 'error');
+				setSubmitDisabled(accountPasswordForm, true);
 				try {
-					const { response, payload } = await authApiJson('/api/auth/restore-account', {
+					const { response, payload } = await authApiJson('/api/auth/change-password', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ email, token, newPassword })
+						body: JSON.stringify({ currentPassword, newPassword })
 					});
-					if (!response.ok) {
-						setAuthStatus(payload.error || 'A fiók visszaállítása nem sikerült.', 'error');
-						return;
-					}
-
-					setAuthStatus(payload.message || 'A fiók visszaállítva.', 'success');
-					recoverApplyForm.reset();
-					switchAuthTab('login');
+					if (!response.ok) return setAuthStatus(payload.error || 'A jelszó módosítása nem sikerült.', 'error');
+					accountPasswordForm.reset();
+					setAuthStatus(payload.message || 'Jelszó módosítva.', 'success');
 				} catch (err) {
-					setAuthStatus('A biztonságos szerverkapcsolat most nem érhető el. Kérlek próbáld újra később.', 'error');
+					setAuthStatus('A jelszó módosítása nem sikerült.', 'error');
 				} finally {
-					setSubmitDisabled(recoverApplyForm, false);
+					setSubmitDisabled(accountPasswordForm, false);
 				}
+			});
+		}
+
+		if (accountSettingsForm && accountThemeMode) {
+			accountSettingsForm.addEventListener('submit', (e) => {
+				e.preventDefault();
+				const nextTheme = accountThemeMode.value || 'system';
+				applyTheme(nextTheme);
+				try { localStorage.setItem(THEME_KEY, nextTheme); } catch (err) { /* ignore storage errors */ }
+				setAuthStatus('Beállítás mentve.', 'success');
+			});
+		}
+
+		if (accountMessageForm) {
+			accountMessageForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				setAuthStatus('');
+				const message = accountMessageForm.elements.message.value.trim();
+				if (!message || message.length < 2) return setAuthStatus('Írj üzenetet.', 'error');
+				setSubmitDisabled(accountMessageForm, true);
+				try {
+					const { response, payload } = await authApiJson('/api/account/messages', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ message })
+					});
+					if (!response.ok) return setAuthStatus(payload.error || 'Az üzenet küldése nem sikerült.', 'error');
+					accountMessageForm.reset();
+					setAuthStatus(payload.notice || 'Üzenet elküldve.', 'success');
+					await loadAccountMessages();
+				} catch (err) {
+					setAuthStatus('Az üzenet küldése nem sikerült.', 'error');
+				} finally {
+					setSubmitDisabled(accountMessageForm, false);
+				}
+			});
+		}
+
+		if (accountNotifyBtn) {
+			accountNotifyBtn.addEventListener('click', () => {
+				setAccountView('messages');
+				markAccountMessagesSeen(Array.isArray(latestAccountData?.messages) ? latestAccountData.messages : []);
 			});
 		}
 
 		if (accountLogoutBtn) {
 			accountLogoutBtn.addEventListener('click', async () => {
 				await authApiJson('/api/auth/logout', { method: 'POST' });
+				latestAccountData = null;
+				isAccountAuthenticated = false;
+				syncSubscriptionNavVisibility();
+				if (accountNotifyBtn) accountNotifyBtn.hidden = true;
+				if (accountNotifyBadge) accountNotifyBadge.hidden = true;
 				setAccountMode('forms');
 				setAuthStatus('Kijelentkezve.', 'success');
 			});
@@ -764,15 +999,19 @@ document.addEventListener('DOMContentLoaded', () => {
 		const adminNavBtns = adminRoot.querySelectorAll('.admin-nav-btn');
 		const adminViews = {
 			users: document.getElementById('admin-users-view'),
-			tasks: document.getElementById('admin-tasks-view')
+			tasks: document.getElementById('admin-tasks-view'),
+			requests: document.getElementById('admin-requests-view'),
+			messages: document.getElementById('admin-messages-view')
 		};
 		const adminUsersList = document.getElementById('admin-users');
 		const adminUserSelect = document.getElementById('admin-user-select');
 		const adminTaskUserSelect = document.getElementById('admin-task-user');
+		const adminMessageUserSelect = document.getElementById('admin-message-user');
 		const adminPasswordForm = document.getElementById('admin-password-form');
 		const adminDisableBtn = document.getElementById('admin-disable-user');
 		const adminRestoreBtn = document.getElementById('admin-restore-user');
 		const adminGenerateTokenBtn = document.getElementById('admin-generate-token');
+		const adminDeleteBtn = document.getElementById('admin-delete-user');
 		const adminRefreshUsersBtn = document.getElementById('admin-refresh-users');
 		const adminTokenOutput = document.getElementById('admin-token-output');
 		const adminSelectedSummary = document.getElementById('admin-selected-summary');
@@ -785,6 +1024,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		const adminTaskList = document.getElementById('admin-task-list');
 		const adminNewTaskBtn = document.getElementById('admin-new-task');
 		const adminTaskResetBtn = document.getElementById('admin-task-reset');
+		const adminRequestList = document.getElementById('admin-request-list');
+		const adminRefreshRequestsBtn = document.getElementById('admin-refresh-requests');
+		const adminMessageList = document.getElementById('admin-message-list');
+		const adminConversationList = document.getElementById('admin-conversation-list');
+		const adminChatUser = document.getElementById('admin-chat-user');
+		const adminChatSubtitle = document.getElementById('admin-chat-subtitle');
+		const adminMessageForm = document.getElementById('admin-message-form');
+		const adminRefreshMessagesBtn = document.getElementById('admin-refresh-messages');
+		const adminNotifyBtn = document.getElementById('admin-notify-btn');
+		const adminNotifyBadge = document.getElementById('admin-notify-badge');
 
 		if (!isBackendOrigin) {
 			setAdminMode('unauth');
@@ -812,6 +1061,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		let cachedUsers = [];
 		let cachedTasks = [];
+		let cachedRequests = [];
+		let cachedMessages = [];
+		let selectedConversationUserId = '';
+		const ADMIN_LAST_SEEN_KEY = 'across-admin-last-seen';
 
 		function setAdminMode(mode) {
 			const showLogin = mode === 'unauth';
@@ -828,6 +1081,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			if (adminApp) adminApp.hidden = !showMain;
 			if (adminLogoutBtn) adminLogoutBtn.hidden = mode === 'unauth';
+			if (adminNotifyBtn) adminNotifyBtn.hidden = mode !== 'ready';
+			if (adminNotifyBadge) adminNotifyBadge.hidden = true;
 		}
 
 		function selectedUser() {
@@ -864,6 +1119,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (status === 'successful') return 'Sikeres';
 			if (status === 'followup') return 'Utánkövetés';
 			if (status === 'failed') return 'Sikertelen';
+			if (status === 'pending') return 'Folyamatban';
+			if (status === 'approved') return 'Jóváhagyva';
+			if (status === 'rejected') return 'Elutasítva';
 			return status === 'active' ? 'Aktív' : 'Letiltva';
 		}
 
@@ -888,6 +1146,32 @@ document.addEventListener('DOMContentLoaded', () => {
 			return user ? `${user.name} (${user.email})` : 'Ismeretlen felhasználó';
 		}
 
+		function readAdminLastSeen() {
+			try { return Number(localStorage.getItem(ADMIN_LAST_SEEN_KEY) || 0); } catch (err) { return 0; }
+		}
+
+		function writeAdminLastSeen(value) {
+			try { localStorage.setItem(ADMIN_LAST_SEEN_KEY, String(value)); } catch (err) { /* ignore */ }
+		}
+
+		function updateAdminNotifications() {
+			if (!adminNotifyBtn || !adminNotifyBadge) return;
+			const unread = cachedMessages.filter(message => message.senderRole === 'user' && new Date(message.createdAt).getTime() > readAdminLastSeen()).length;
+			const showBell = !adminApp?.hidden;
+			const showBubble = showBell && unread > 0;
+			adminNotifyBtn.hidden = !showBell;
+			adminNotifyBtn.style.display = showBell ? '' : 'none';
+			adminNotifyBadge.hidden = !showBubble;
+			adminNotifyBadge.style.display = showBubble ? '' : 'none';
+			adminNotifyBadge.textContent = String(unread);
+		}
+
+		function markAdminMessagesSeen() {
+			const latest = cachedMessages.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+			if (latest) writeAdminLastSeen(new Date(latest.createdAt).getTime());
+			updateAdminNotifications();
+		}
+
 		function updateAdminStats() {
 			if (adminStatUsers) adminStatUsers.textContent = String(cachedUsers.length);
 			if (adminStatTasks) adminStatTasks.textContent = String(cachedTasks.length);
@@ -901,6 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			const user = selectedUser();
 			if (!user) {
 				adminSelectedSummary.textContent = 'Nincs kiválasztott felhasználó.';
+				updateUserActionState(null);
 				return;
 			}
 
@@ -910,6 +1195,19 @@ document.addEventListener('DOMContentLoaded', () => {
 				textEl('span', '', user.email),
 				textEl('span', '', `${roleLabel(user.role)} · ${statusLabel(user.status)} · létrehozva: ${formatDate(user.createdAt)} · feladatok: ${taskCount}`)
 			);
+			updateUserActionState(user);
+		}
+
+		function updateUserActionState(user) {
+			const isAdminUser = user?.role === 'admin';
+			[adminDisableBtn, adminDeleteBtn].forEach(btn => {
+				if (btn) {
+					btn.disabled = !user || isAdminUser;
+					btn.title = isAdminUser ? 'Admin fiók nem törölhető vagy tiltható le ezen a felületen.' : '';
+				}
+			});
+			if (adminRestoreBtn) adminRestoreBtn.disabled = !user;
+			if (adminGenerateTokenBtn) adminGenerateTokenBtn.disabled = !user;
 		}
 
 		function renderUserOptions(selectEl, includeAdmins) {
@@ -933,6 +1231,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			cachedUsers = Array.isArray(users) ? users : [];
 			renderUserOptions(adminUserSelect, true);
 			renderUserOptions(adminTaskUserSelect, false);
+			renderUserOptions(adminMessageUserSelect, false);
 			updateSelectedSummary();
 
 			if (adminUsersList) {
@@ -959,6 +1258,112 @@ document.addEventListener('DOMContentLoaded', () => {
 				});
 			}
 			updateAdminStats();
+		}
+
+		function renderPlanRequests(requests) {
+			cachedRequests = Array.isArray(requests) ? requests : [];
+			if (!adminRequestList) return;
+			adminRequestList.innerHTML = '';
+			if (!cachedRequests.length) {
+				adminRequestList.appendChild(textEl('p', 'auth-hint', 'Még nincs csomagmódosítási kérelem.'));
+				return;
+			}
+			cachedRequests.forEach(request => {
+				const item = document.createElement('article');
+				item.className = 'admin-task-item';
+				const header = document.createElement('div');
+				header.className = 'admin-task-item-header';
+				header.replaceChildren(
+					textEl('strong', '', `${request.userName} (${request.userEmail})`),
+					textEl('span', `admin-badge ${request.status === 'pending' ? 'is-warning' : request.status === 'approved' ? 'is-active' : 'is-disabled'}`, statusLabel(request.status))
+				);
+				const meta = document.createElement('div');
+				meta.className = 'history-meta';
+				meta.replaceChildren(
+					textEl('span', '', `${request.currentPlanName || request.currentPlan} -> ${request.requestedPlanName || request.requestedPlan}`),
+					textEl('span', '', formatDate(request.createdAt))
+				);
+				const actions = document.createElement('div');
+				actions.className = 'admin-task-actions';
+				const approveBtn = textEl('button', 'btn', 'Jóváhagyás');
+				approveBtn.type = 'button';
+				approveBtn.disabled = request.status !== 'pending';
+				approveBtn.addEventListener('click', () => updatePlanRequest(request.id, 'approved'));
+				const rejectBtn = textEl('button', 'btn secondary danger', 'Elutasítás');
+				rejectBtn.type = 'button';
+				rejectBtn.disabled = request.status !== 'pending';
+				rejectBtn.addEventListener('click', () => updatePlanRequest(request.id, 'rejected'));
+				actions.replaceChildren(approveBtn, rejectBtn);
+				item.replaceChildren(header, meta, textEl('p', 'auth-hint', request.note || request.adminNote || ''), actions);
+				adminRequestList.appendChild(item);
+			});
+		}
+
+		function renderAdminMessages(messages) {
+			cachedMessages = Array.isArray(messages) ? messages : [];
+			const grouped = new Map();
+			cachedMessages.forEach(message => {
+				const key = message.userId || 'unknown';
+				if (!grouped.has(key)) grouped.set(key, []);
+				grouped.get(key).push(message);
+			});
+			const users = Array.from(grouped.entries()).sort((a, b) => new Date(b[1][b[1].length - 1].createdAt).getTime() - new Date(a[1][a[1].length - 1].createdAt).getTime());
+
+			if (!adminConversationList) return;
+			adminConversationList.innerHTML = '';
+			if (!users.length) {
+				adminConversationList.appendChild(textEl('p', 'auth-hint', 'Még nincs üzenetváltás.'));
+				if (adminMessageList) adminMessageList.innerHTML = '';
+				if (adminChatUser) adminChatUser.textContent = 'Válassz ügyfelet';
+				if (adminChatSubtitle) adminChatSubtitle.textContent = 'A válaszok itt jelennek meg.';
+				updateAdminNotifications();
+				return;
+			}
+
+			if (!selectedConversationUserId || !grouped.has(selectedConversationUserId)) {
+				selectedConversationUserId = users[0][0];
+			}
+
+			users.forEach(([userId, items]) => {
+				const latest = items.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+				const unread = items.filter(message => message.senderRole === 'user' && new Date(message.createdAt).getTime() > readAdminLastSeen()).length;
+				const article = document.createElement('button');
+				article.type = 'button';
+				article.className = `admin-conversation-item ${userId === selectedConversationUserId ? 'is-active' : ''}`;
+				article.innerHTML = `
+					<div class="admin-conversation-meta">
+					  <strong>${userName(userId)}</strong>
+					  ${unread ? '<span class="admin-conversation-badge">' + unread + '</span>' : ''}
+					</div>
+					<span class="auth-hint">${(latest && latest.body) ? latest.body.slice(0, 72) : 'Nincs előző üzenet'}</span>
+				`;
+				article.addEventListener('click', () => {
+					selectedConversationUserId = userId;
+					renderAdminMessages(cachedMessages);
+					markAdminMessagesSeen();
+				});
+				adminConversationList.appendChild(article);
+			});
+
+			const selectedItems = grouped.get(selectedConversationUserId) || users[0][1];
+			if (adminMessageList) {
+				adminMessageList.innerHTML = '';
+				const selectedUser = cachedUsers.find(user => user.id === selectedConversationUserId) || null;
+				if (adminChatUser) adminChatUser.textContent = selectedUser ? `${selectedUser.name} (${selectedUser.email})` : 'Válassz ügyfelet';
+				if (adminChatSubtitle) adminChatSubtitle.textContent = selectedUser ? 'A legfrissebb válaszok közvetlenül a beszélgetésben láthatók.' : 'A válaszok itt jelennek meg.';
+				if (adminMessageUserSelect) adminMessageUserSelect.value = selectedConversationUserId;
+				selectedItems.slice().sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).forEach(message => {
+					const item = document.createElement('article');
+					item.className = `message-item ${message.senderRole === 'admin' ? 'is-admin' : 'is-user'}`;
+					item.replaceChildren(
+						textEl('strong', '', `${message.senderRole === 'admin' ? 'Admin' : userName(message.userId)} · ${formatDate(message.createdAt)}`),
+						textEl('p', '', message.body || '')
+					);
+					adminMessageList.appendChild(item);
+				});
+				adminMessageList.scrollTop = adminMessageList.scrollHeight;
+			}
+			updateAdminNotifications();
 		}
 
 		function renderTasks(tasks) {
@@ -1022,10 +1427,31 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderTasks(payload.tasks || []);
 		}
 
+		async function loadAdminPlanRequests() {
+			const { response, payload } = await apiJson('/api/admin/plan-requests');
+			if (!response.ok) throw new Error(payload.error || 'A csomagkérelmek nem tölthetők be.');
+			renderPlanRequests(payload.requests || []);
+		}
+
+		async function loadAdminMessages() {
+			const { response, payload } = await apiJson('/api/admin/messages');
+			if (!response.ok) throw new Error(payload.error || 'Az üzenetek nem tölthetők be.');
+			renderAdminMessages(payload.messages || []);
+			if (!readAdminLastSeen()) markAdminMessagesSeen();
+		}
+
 		async function refreshAdminData() {
 			await loadAdminUsers();
 			await loadAdminTasks();
+			await loadAdminPlanRequests();
+			await loadAdminMessages();
 			renderUsers(cachedUsers);
+		}
+
+		function openAdminMessages() {
+			setAdminView('messages');
+			markAdminMessagesSeen();
+			loadAdminMessages().catch(err => setAdminStatus(err.message, 'error'));
 		}
 
 		function resetTaskForm() {
@@ -1080,6 +1506,22 @@ document.addEventListener('DOMContentLoaded', () => {
 			resetTaskForm();
 			await loadAdminTasks();
 			renderUsers(cachedUsers);
+		}
+
+		async function updatePlanRequest(requestId, status) {
+			const adminNote = window.prompt(status === 'approved' ? 'Megjegyzés a jóváhagyáshoz (opcionális):' : 'Elutasítás oka (opcionális):') || '';
+			const { response, payload } = await apiJson(`/api/admin/plan-requests/${encodeURIComponent(requestId)}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ status, adminNote })
+			});
+			if (!response.ok) {
+				setAdminStatus(payload.error || 'A kérelem frissítése nem sikerült.', 'error');
+				return;
+			}
+			setAdminStatus(payload.message || 'Kérelem frissítve.', 'success');
+			await refreshAdminData();
+			setAdminView('requests');
 		}
 
 		async function bootstrapAdmin() {
@@ -1194,8 +1636,17 @@ document.addEventListener('DOMContentLoaded', () => {
 				const viewName = btn.getAttribute('data-admin-view') || 'users';
 				setAdminView(viewName);
 				setAdminStatus('');
+				if (viewName === 'requests') loadAdminPlanRequests().catch(err => setAdminStatus(err.message, 'error'));
+				if (viewName === 'messages') {
+					markAdminMessagesSeen();
+					loadAdminMessages().catch(err => setAdminStatus(err.message, 'error'));
+				}
 			});
 		});
+
+		if (adminNotifyBtn) {
+			adminNotifyBtn.addEventListener('click', () => openAdminMessages());
+		}
 
 		if (adminNewTaskBtn) {
 			adminNewTaskBtn.addEventListener('click', () => {
@@ -1267,6 +1718,28 @@ document.addEventListener('DOMContentLoaded', () => {
 				try {
 					await refreshAdminData();
 					setAdminStatus('Admin adatok frissítve.', 'success');
+				} catch (err) {
+					setAdminStatus(err.message, 'error');
+				}
+			});
+		}
+
+		if (adminRefreshRequestsBtn) {
+			adminRefreshRequestsBtn.addEventListener('click', async () => {
+				try {
+					await loadAdminPlanRequests();
+					setAdminStatus('Csomagkérelmek frissítve.', 'success');
+				} catch (err) {
+					setAdminStatus(err.message, 'error');
+				}
+			});
+		}
+
+		if (adminRefreshMessagesBtn) {
+			adminRefreshMessagesBtn.addEventListener('click', async () => {
+				try {
+					await loadAdminMessages();
+					setAdminStatus('Üzenetek frissítve.', 'success');
 				} catch (err) {
 					setAdminStatus(err.message, 'error');
 				}
@@ -1372,17 +1845,86 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
+		if (adminMessageForm) {
+			adminMessageForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				setAdminStatus('');
+				const userId = adminMessageForm.elements.userId.value;
+				const message = adminMessageForm.elements.message.value.trim();
+				if (!userId) return setAdminStatus('Válassz ügyfelet.', 'error');
+				if (!message || message.length < 2) return setAdminStatus('Írj üzenetet.', 'error');
+				setSubmitDisabled(adminMessageForm, true);
+				try {
+					const { response, payload } = await apiJson('/api/admin/messages', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ userId, message })
+					});
+					if (!response.ok) {
+						setAdminStatus(payload.error || 'Az üzenet küldése nem sikerült.', 'error');
+						return;
+					}
+					adminMessageForm.reset();
+					renderUserOptions(adminMessageUserSelect, false);
+					setAdminStatus(payload.notice || 'Válasz elküldve.', 'success');
+					await loadAdminMessages();
+					selectedConversationUserId = userId;
+					renderAdminMessages(cachedMessages);
+				} catch (err) {
+					setAdminStatus('Az üzenet küldése nem sikerült.', 'error');
+				} finally {
+					setSubmitDisabled(adminMessageForm, false);
+				}
+			});
+		}
+
+		if (adminDeleteBtn) {
+			adminDeleteBtn.addEventListener('click', async () => {
+				if (adminTokenOutput) adminTokenOutput.textContent = '';
+				const user = selectedUser();
+				if (!user) {
+					setAdminStatus('Válassz ki felhasználót.', 'error');
+					return;
+				}
+				if (user.role === 'admin') {
+					setAdminStatus('Admin fiók nem törölhető ezen a felületen.', 'error');
+					return;
+				}
+
+				const taskCount = cachedTasks.filter(task => task.userId === user.id).length;
+				const confirmed = window.confirm(`Biztosan törlöd ezt a fiókot?\n\n${user.name} (${user.email})\nKapcsolódó előzmények: ${taskCount} db\n\nA művelet nem vonható vissza.`);
+				if (!confirmed) return;
+
+				const { response, payload } = await apiJson(`/api/admin/users/${encodeURIComponent(user.id)}`, { method: 'DELETE' });
+				if (!response.ok) {
+					setAdminStatus(payload.error || 'A fiók törlése nem sikerült.', 'error');
+					return;
+				}
+
+				setAdminStatus(payload.message || 'Fiók törölve.', 'success');
+				await refreshAdminData();
+				resetTaskForm();
+			});
+		}
+
 		if (adminLogoutBtn) {
 			adminLogoutBtn.addEventListener('click', async () => {
 				await apiJson('/api/auth/logout', { method: 'POST' });
 				setAdminMode('unauth');
 				setAdminStatus('Kijelentkezve.', 'success');
 				if (adminSessionUser) adminSessionUser.textContent = 'Nincs bejelentkezve';
+				window.location.href = 'index.html';
 			});
 		}
 
 		bootstrapAdmin().catch(() => {
 			setAdminStatus('Az admin felület nem érhető el.', 'error');
 		});
+
+		window.setInterval(() => {
+			if (adminApp && !adminApp.hidden) {
+				loadAdminMessages().catch(() => {});
+			}
+		}, 15000);
 	}
 });
