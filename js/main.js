@@ -37,6 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; }
 	}
 
+	function themeToggleLabel() {
+		const resolved = resolveTheme(currentStoredTheme());
+		return resolved === 'dark' ? 'Világos mód' : 'Sötét mód';
+	}
+
 	// initialize theme from storage or default to dark
 	const storedTheme = currentStoredTheme();
 	if (storedTheme) {
@@ -72,14 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (!href || href.startsWith('http')) return;
 			try {
 				const url = new URL(href, window.location.href);
-				const samePage = url.pathname.split('/').pop() === window.location.pathname.split('/').pop();
-				const sameHash = url.hash ? url.hash === window.location.hash : !window.location.hash;
+				const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+				const linkPage = url.pathname.split('/').pop() || 'index.html';
+				const currentHash = window.location.hash || (currentPage === 'auth.html' ? '#login' : '');
+				const samePage = linkPage === currentPage;
+				const sameHash = url.hash ? url.hash === currentHash : !currentHash;
 				link.classList.toggle('is-active', samePage && sameHash);
 			} catch (err) {
 				/* ignore malformed local links */
 			}
 		});
 	}
+
+	window.addEventListener('hashchange', markActiveNav);
 
 	async function revealPrivateNavIfAllowed() {
 		if (!isBackendOrigin) return;
@@ -121,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function setPublicAuthNavVisibility(isLoggedIn) {
-		document.querySelectorAll('.navbar nav a[href="auth.html#register"]').forEach(link => {
+		document.querySelectorAll('.navbar nav a[href="auth.html#login"], .navbar nav a[href="auth.html#register"]').forEach(link => {
 			link.hidden = isLoggedIn;
 			link.style.display = isLoggedIn ? 'none' : '';
 		});
@@ -164,6 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
 	revealPrivateNavIfAllowed().finally(() => {
 		markActiveNav();
 		syncGlobalBellVisibility().catch(() => {});
+	});
+	document.querySelectorAll('.navbar nav a[href]').forEach(link => {
+		link.addEventListener('click', () => {
+			window.setTimeout(markActiveNav, 0);
+			if (typeof link.blur === 'function') window.setTimeout(() => link.blur(), 80);
+		});
 	});
 
 	// Mobile nav toggle (slide-in panel)
@@ -235,6 +251,21 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			mobilePanel.appendChild(clone);
 		}
+
+		const mobileThemeBtn = document.createElement('button');
+		mobileThemeBtn.type = 'button';
+		mobileThemeBtn.className = 'mobile-theme-toggle';
+		mobileThemeBtn.setAttribute('aria-label', 'Téma váltása');
+		mobileThemeBtn.textContent = themeToggleLabel();
+		mobileThemeBtn.addEventListener('click', () => {
+			const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+			const next = isDark ? 'light' : 'dark';
+			applyTheme(next);
+			try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore storage errors */ }
+			mobileThemeBtn.textContent = themeToggleLabel();
+		});
+		mobilePanel.appendChild(mobileThemeBtn);
+
 		const closeBtn = document.createElement('button');
 		closeBtn.className = 'mobile-nav-close';
 		closeBtn.setAttribute('aria-label', 'Bezárás');
@@ -412,7 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const authRoot = document.getElementById('auth');
 	if (authRoot) {
-		const tabs = authRoot.querySelectorAll('.auth-tab');
 		const panels = {
 			login: document.getElementById('auth-login-panel'),
 			register: document.getElementById('auth-register-panel')
@@ -564,12 +594,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		function setAccountMode(mode) {
 			const isDashboard = mode === 'dashboard';
 			if (accountDashboard) accountDashboard.hidden = !isDashboard;
-			tabs.forEach(btn => { btn.hidden = isDashboard; });
 			Object.values(panels).forEach(panel => {
 				if (panel) panel.hidden = isDashboard ? true : panel.hidden;
 			});
-			const tabsWrap = authRoot.querySelector('.auth-tabs');
-			if (tabsWrap) tabsWrap.hidden = isDashboard;
 			if (!isDashboard) {
 				if (panels.login) panels.login.hidden = false;
 				switchAuthTab(initialAuthTab());
@@ -695,7 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
 				return false;
 			}
 			renderAccountDashboard(payload);
-			if (accountNotifyBtn) accountNotifyBtn.hidden = false;
 			if (showSuccess) setAuthStatus('Sikeres bejelentkezés.', 'success');
 			loadAccountMessages().catch(() => {});
 			return true;
@@ -724,11 +750,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		function switchAuthTab(tabName) {
 			const nextTab = panels[tabName] ? tabName : 'login';
-			tabs.forEach(btn => {
-				const isActive = btn.getAttribute('data-auth-tab') === nextTab;
-				btn.classList.toggle('is-active', isActive);
-				btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-			});
 			if (panels.login) panels.login.hidden = nextTab !== 'login';
 			if (panels.register) panels.register.hidden = nextTab !== 'register';
 			if (nextTab !== 'login') toggleForcePasswordForm(false);
@@ -772,15 +793,6 @@ document.addEventListener('DOMContentLoaded', () => {
 			setAuthStatus('Első belépésnél kötelező a jelszócsere.', 'error');
 			toggleForcePasswordForm(true);
 		}
-
-		tabs.forEach(btn => {
-			btn.addEventListener('click', () => {
-				const tabName = btn.getAttribute('data-auth-tab');
-				if (!tabName) return;
-				if (history.replaceState) history.replaceState(null, '', `#${tabName}`);
-				switchAuthTab(tabName);
-			});
-		});
 
 		window.addEventListener('hashchange', () => {
 			if (accountDashboard && !accountDashboard.hidden) return;

@@ -49,6 +49,10 @@ html[data-theme="dark"] {
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   min-height: 100%;
   width: 100%;
@@ -296,6 +300,23 @@ html[data-theme="dark"] .site-logo {
   color: var(--text-dark);
   font-weight: 700;
   text-decoration: none;
+}
+
+.mobile-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
 }
 
 .mobile-nav-icon {
@@ -978,26 +999,6 @@ form button[type="submit"] {
   color: var(--text-light);
 }
 
-.auth-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding: 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-soft);
-}
-
-.auth-tabs .btn {
-  box-shadow: none;
-}
-
-.auth-tab.is-active {
-  background: var(--accent);
-  color: #fff;
-}
-
 .auth-status {
   min-height: 1.4rem;
   margin-bottom: 0.6rem;
@@ -1567,8 +1568,7 @@ form button[type="submit"] {
   }
 
   #theme-toggle {
-    margin-left: auto;
-    order: 2;
+    display: none !important;
   }
 }
 
@@ -1577,22 +1577,122 @@ form button[type="submit"] {
     width: min(92%, 1180px);
   }
 
+  .section {
+    padding: 3.6rem 0;
+  }
+
+  .section-shell,
+  .cards {
+    gap: 1.2rem;
+  }
+
+  .section-heading.center {
+    max-width: 32rem;
+  }
+
+  .section h2 {
+    line-height: 1.2;
+  }
+
+  .card p,
+  .section p {
+    line-height: 1.76;
+  }
+
   .hero {
     align-items: flex-start;
-    padding-top: 2rem;
+    padding-top: 2.8rem;
+    padding-bottom: 3.25rem;
   }
 
   .hero h2,
   .hero-concept h2 {
-    font-size: clamp(2rem, 12vw, 3rem);
+    margin-bottom: 1.25rem;
+    font-size: clamp(2rem, 9.8vw, 2.9rem);
+    line-height: 1.14;
   }
 
   .hero-concept {
     min-height: auto;
+    padding-top: 3.2rem;
+  }
+
+  .hero-layout {
+    gap: 2.75rem;
+  }
+
+  .hero-copy {
+    max-width: 34rem;
+  }
+
+  .hero-pill {
+    margin-bottom: 1.75rem;
+    padding: 0.42rem 0.65rem;
+    white-space: normal;
+    font-size: 0.68rem;
+    line-height: 1.38;
+  }
+
+  .hero-copy > p:not(.hero-pill) {
+    max-width: 32rem;
+    font-size: 1rem;
+    line-height: 1.85;
+  }
+
+  .hero-buttons {
+    gap: 0.9rem;
+    margin-top: 1.65rem;
+  }
+
+  .hero-trust {
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .hero-trust div {
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 58%, transparent);
+  }
+
+  .hero-trust strong {
+    font-size: 0.92rem;
+  }
+
+  .hero-trust span {
+    margin-top: 0.15rem;
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+
+  .status-panel {
+    margin-top: 0.25rem;
+    padding: 1.15rem;
+    border-radius: 18px;
   }
 
   .status-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 34px minmax(0, 1fr) 28px;
+    gap: 0.85rem;
+    padding: 0.95rem;
+  }
+
+  .status-row > span,
+  .status-row em {
+    width: 30px;
+    height: 30px;
+  }
+
+  .status-row strong {
+    line-height: 1.35;
+  }
+
+  .status-row p {
+    margin-top: 0.2rem;
+    font-size: 0.82rem;
+    line-height: 1.58;
   }
 
   .status-panel-head,
@@ -1610,7 +1710,6 @@ form button[type="submit"] {
     width: 100%;
   }
 
-  .auth-tabs,
   .account-hero,
   .subscription-card,
   .history-item-header,
@@ -1618,14 +1717,6 @@ form button[type="submit"] {
   .admin-session {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .auth-tabs {
-    border-radius: var(--radius);
-  }
-
-  .auth-tabs .btn {
-    width: 100%;
   }
 
   .account-stats,
@@ -1643,5 +1734,25 @@ form button[type="submit"] {
 
   .admin-users-list li {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero-concept h2 {
+    font-size: clamp(1.85rem, 9.2vw, 2.45rem);
+  }
+
+  .hero-pill {
+    max-width: 18rem;
+    font-size: 0.64rem;
+  }
+
+  .status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .status-row > span,
+  .status-row em {
+    justify-self: start;
   }
 }
