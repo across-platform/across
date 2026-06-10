@@ -19,10 +19,10 @@
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
       <a href="services.html">Szolgáltatások</a>
-      <a href="portfolio.html">Portfólió</a>
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
+      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
       <a href="admin.html">Admin</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
@@ -47,6 +47,63 @@
         </div>
 
         <div class="auth-status" id="auth-status" role="status" aria-live="polite"></div>
+
+        <div id="account-dashboard" class="account-dashboard" hidden>
+          <div class="account-hero">
+            <div>
+              <p class="section-kicker">Saját fiók</p>
+              <h3 id="account-greeting">Üdv újra!</h3>
+              <p id="account-email" class="auth-hint"></p>
+            </div>
+            <button id="account-logout" type="button" class="btn secondary">Kijelentkezés</button>
+          </div>
+
+          <div class="account-menu" aria-label="Fiók menüpontok">
+            <a href="#account-overview" class="btn secondary">Áttekintés</a>
+            <a href="#subscription" class="btn secondary account-subscription-link">Előfizetésem</a>
+            <a href="#support-history" class="btn secondary">Előzmények</a>
+            <a href="contact.html" class="btn secondary">Új segítségkérés</a>
+          </div>
+
+          <div id="account-overview" class="account-stats" aria-label="Fiók összesítő">
+            <div class="account-stat">
+              <span>Megoldott ügyek</span>
+              <strong id="account-solved">-</strong>
+            </div>
+            <div class="account-stat">
+              <span>Átlagos idő</span>
+              <strong id="account-average-time">-</strong>
+            </div>
+            <div class="account-stat">
+              <span>Utolsó segítség</span>
+              <strong id="account-last-help">-</strong>
+            </div>
+          </div>
+
+          <section id="subscription" class="account-panel">
+            <div class="panel-heading">
+              <h3>Előfizetésem</h3>
+              <p class="auth-hint">Csomag, státusz, következő megújulás és a csomaghoz tartozó szolgáltatások.</p>
+            </div>
+            <div class="subscription-card">
+              <div>
+                <span id="subscription-status" class="account-badge">Betöltés</span>
+                <h4 id="subscription-plan">-</h4>
+                <p id="subscription-renewal" class="auth-hint">-</p>
+              </div>
+              <a href="pricing.html" class="btn">Csomag módosítása</a>
+            </div>
+            <ul id="subscription-features" class="account-feature-list"></ul>
+          </section>
+
+          <section id="support-history" class="account-panel">
+            <div class="panel-heading">
+              <h3>Előzmények</h3>
+              <p class="auth-hint">Korábbi segítségkérések: mikor történt, ki segített, sikeres volt-e, és mennyi időt vett igénybe.</p>
+            </div>
+            <div id="support-history-list" class="history-list"></div>
+          </section>
+        </div>
 
         <div id="auth-login-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-login-tab">
           <form id="login-form" novalidate>

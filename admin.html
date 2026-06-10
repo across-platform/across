@@ -19,10 +19,10 @@
     <nav aria-label="Fő navigáció">
       <a href="index.html">Főoldal</a>
       <a href="services.html">Szolgáltatások</a>
-      <a href="portfolio.html">Portfólió</a>
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
       <a href="auth.html">Fiók</a>
+      <a href="auth.html#subscription" class="nav-subscription">Előfizetésem</a>
       <a href="admin.html">Admin</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
@@ -34,10 +34,10 @@
   <section id="admin" class="section contact-form">
     <div class="container">
       <div class="glass auth-card admin-card">
-        <div class="auth-heading">
+        <div class="auth-heading admin-heading">
           <p class="section-kicker">Adminisztráció</p>
           <h2>Admin felület</h2>
-          <p class="auth-lead">Felhasználók kezelése, jelszócsere indítása, fiók letiltása és visszaállítása egy helyen.</p>
+          <p class="auth-lead">Felhasználók, hozzáférések és elvégzett támogatási feladatok kezelése egy áttekinthető munkafelületen.</p>
         </div>
 
         <div id="admin-status" class="auth-status" role="status" aria-live="polite"></div>
@@ -80,42 +80,152 @@
           <button type="submit" class="btn">Jelszó cseréje</button>
         </form>
 
-        <div class="admin-workspace">
-          <form id="admin-select-form" class="admin-select-card" novalidate>
-            <div>
-              <label for="admin-user-select">Felhasználó kiválasztása</label>
-              <p class="auth-hint">A kijelölt felhasználón futnak az alábbi műveletek.</p>
+        <div id="admin-app" class="admin-app" hidden>
+          <div class="admin-dashboard" aria-label="Admin áttekintés">
+            <div class="account-stat">
+              <span>Felhasználók</span>
+              <strong id="admin-stat-users">-</strong>
             </div>
-            <select id="admin-user-select" required></select>
-            <div id="admin-selected-summary" class="admin-selected-summary" aria-live="polite"></div>
-          </form>
-
-          <div class="admin-actions">
-            <form id="admin-password-form" novalidate>
-              <h3>Jelszókezelés</h3>
-              <p class="auth-hint">Az új jelszó után a felhasználónak a következő belépéskor saját jelszót kell választania.</p>
-              <label for="admin-new-password">Ideiglenes új jelszó</label>
-              <input id="admin-new-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required placeholder="Új erős jelszó">
-              <button type="submit" class="btn">Jelszó módosítása</button>
-            </form>
-
-            <div class="admin-row-actions" aria-label="Felhasználói műveletek">
-              <button id="admin-disable-user" type="button" class="btn secondary">Fiók letiltása</button>
-              <button id="admin-restore-user" type="button" class="btn secondary">Fiók visszaállítása</button>
-              <button id="admin-generate-token" type="button" class="btn secondary">Reset token generálás</button>
-              <button id="admin-refresh-users" type="button" class="btn secondary">Lista frissítése</button>
+            <div class="account-stat">
+              <span>Elvégzett feladatok</span>
+              <strong id="admin-stat-tasks">-</strong>
             </div>
-
-            <p id="admin-token-output" class="auth-hint admin-token-output"></p>
+            <div class="account-stat">
+              <span>Sikeres megoldások</span>
+              <strong id="admin-stat-success">-</strong>
+            </div>
           </div>
-        </div>
 
-        <div class="admin-users-list">
-          <div class="panel-heading">
-            <h3>Felhasználók</h3>
-            <p class="auth-hint">Gyors áttekintés az elérhető fiókokról és állapotukról.</p>
+          <div class="admin-shell">
+            <nav class="admin-side-nav" aria-label="Admin menü">
+              <button type="button" class="admin-nav-btn is-active" data-admin-view="users">Felhasználók</button>
+              <button type="button" class="admin-nav-btn" data-admin-view="tasks">Elvégzett feladatok</button>
+            </nav>
+
+            <div class="admin-main">
+              <section id="admin-users-view" class="admin-view">
+                <div class="admin-toolbar">
+                  <div>
+                    <h3>Felhasználók</h3>
+                    <p class="auth-hint">Hozzáférések, jelszó-visszaállítás és fiókállapot kezelése.</p>
+                  </div>
+                  <button id="admin-refresh-users" type="button" class="btn secondary">Frissítés</button>
+                </div>
+
+                <div class="admin-workspace">
+                  <form id="admin-select-form" class="admin-select-card" novalidate>
+                    <div>
+                      <label for="admin-user-select">Felhasználó kiválasztása</label>
+                      <p class="auth-hint">A kijelölt felhasználón futnak az alábbi műveletek.</p>
+                    </div>
+                    <select id="admin-user-select" required></select>
+                    <div id="admin-selected-summary" class="admin-selected-summary" aria-live="polite"></div>
+                  </form>
+
+                  <div class="admin-actions">
+                    <form id="admin-password-form" novalidate>
+                      <h3>Jelszókezelés</h3>
+                      <p class="auth-hint">Az új jelszó után a felhasználónak a következő belépéskor saját jelszót kell választania.</p>
+                      <label for="admin-new-password">Ideiglenes új jelszó</label>
+                      <input id="admin-new-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required placeholder="Új erős jelszó">
+                      <button type="submit" class="btn">Jelszó módosítása</button>
+                    </form>
+
+                    <div class="admin-row-actions" aria-label="Felhasználói műveletek">
+                      <button id="admin-disable-user" type="button" class="btn secondary">Fiók letiltása</button>
+                      <button id="admin-restore-user" type="button" class="btn secondary">Fiók visszaállítása</button>
+                      <button id="admin-generate-token" type="button" class="btn secondary">Reset token generálás</button>
+                    </div>
+
+                    <p id="admin-token-output" class="auth-hint admin-token-output"></p>
+                  </div>
+                </div>
+
+                <div class="admin-users-list">
+                  <div class="panel-heading">
+                    <h3>Felhasználói lista</h3>
+                    <p class="auth-hint">Gyors áttekintés az elérhető fiókokról és állapotukról.</p>
+                  </div>
+                  <ul id="admin-users"></ul>
+                </div>
+              </section>
+
+              <section id="admin-tasks-view" class="admin-view" hidden>
+                <div class="admin-toolbar">
+                  <div>
+                    <h3>Elvégzett feladatok</h3>
+                    <p class="auth-hint">Részletes munkanapló: ügyfél, segítő, eredmény, időtartam és megoldási leírás.</p>
+                  </div>
+                  <button id="admin-new-task" type="button" class="btn secondary">Új feladat</button>
+                </div>
+
+                <div class="admin-task-layout">
+                  <form id="admin-task-form" class="admin-task-form" novalidate>
+                    <input id="admin-task-id" name="taskId" type="hidden">
+
+                    <div class="panel-heading">
+                      <h3 id="admin-task-form-title">Feladat rögzítése</h3>
+                      <p class="auth-hint">A mentett feladat megjelenik a kiválasztott ügyfél saját előzményei között is.</p>
+                    </div>
+
+                    <label for="admin-task-user">Ügyfél</label>
+                    <select id="admin-task-user" name="userId" required></select>
+
+                    <div class="admin-form-grid">
+                      <div>
+                        <label for="admin-task-helper">Ki segített?</label>
+                        <input id="admin-task-helper" name="helper" type="text" required placeholder="Pl. Kovács Anna">
+                      </div>
+                      <div>
+                        <label for="admin-task-completed">Időpont</label>
+                        <input id="admin-task-completed" name="completedAt" type="datetime-local" required>
+                      </div>
+                    </div>
+
+                    <label for="admin-task-topic">Feladat / probléma</label>
+                    <input id="admin-task-topic" name="topic" type="text" required placeholder="Pl. Nyomtató kapcsolat helyreállítása">
+
+                    <div class="admin-form-grid">
+                      <div>
+                        <label for="admin-task-status">Eredmény</label>
+                        <select id="admin-task-status" name="status" required>
+                          <option value="successful">Sikeresen megoldva</option>
+                          <option value="followup">Utánkövetés szükséges</option>
+                          <option value="failed">Nem sikerült megoldani</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label for="admin-task-duration">Időtartam percben</label>
+                        <input id="admin-task-duration" name="durationMinutes" type="number" min="1" max="1440" required placeholder="45">
+                      </div>
+                    </div>
+
+                    <label for="admin-task-device">Eszköz / környezet</label>
+                    <input id="admin-task-device" name="device" type="text" placeholder="Pl. Windows laptop, TeamViewer">
+
+                    <label for="admin-task-solution">Megoldás / ügyfélnek látható leírás</label>
+                    <textarea id="admin-task-solution" name="solution" rows="4" required placeholder="Mit néztetek meg, mi lett a megoldás, kell-e utánkövetés?"></textarea>
+
+                    <label for="admin-task-internal">Belső megjegyzés</label>
+                    <textarea id="admin-task-internal" name="internalNote" rows="3" placeholder="Csak adminoknak látható technikai megjegyzés."></textarea>
+
+                    <div class="admin-row-actions">
+                      <button type="submit" class="btn">Feladat mentése</button>
+                      <button id="admin-task-reset" type="button" class="btn secondary">Űrlap törlése</button>
+                    </div>
+                  </form>
+
+                  <div class="admin-task-list-panel">
+                    <div class="panel-heading">
+                      <h3>Munkanapló</h3>
+                      <p class="auth-hint">Kattints egy feladatra a szerkesztéshez.</p>
+                    </div>
+                    <div id="admin-task-list" class="admin-task-list"></div>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
-          <ul id="admin-users"></ul>
         </div>
       </div>
     </div>

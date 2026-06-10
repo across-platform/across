@@ -16,6 +16,7 @@ const IS_PROD = NODE_ENV === 'production';
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, 'data');
 const USERS_DB_PATH = path.join(DATA_DIR, 'users.json');
+const TASKS_DB_PATH = path.join(DATA_DIR, 'tasks.json');
 
 const DEV_DEFAULT_ADMIN_EMAIL = 'admin@across-platform.hu';
 const DEV_DEFAULT_ADMIN_PASSWORD = 'Admin!ChangeMe2026';
@@ -74,6 +75,14 @@ function sanitizeName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
 }
 
+function sanitizeText(value, maxLength = 500) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
+}
+
+function sanitizeMultiline(value, maxLength = 1200) {
+  return String(value || '').trim().replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').slice(0, maxLength);
+}
+
 function isStrongPassword(password) {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{12,}$/.test(String(password || ''));
 }
@@ -108,6 +117,143 @@ function publicUser(user) {
   };
 }
 
+function taskWithDefaults(task) {
+  const status = ['successful', 'followup', 'failed'].includes(task.status) ? task.status : 'successful';
+  return {
+    id: task.id || crypto.randomUUID(),
+    userId: task.userId || '',
+    helper: sanitizeText(task.helper || 'Across-platform', 80),
+    topic: sanitizeText(task.topic || 'Távoli segítségnyújtás', 120),
+    status,
+    durationMinutes: Math.max(0, Number.parseInt(task.durationMinutes, 10) || 0),
+    completedAt: task.completedAt || new Date().toISOString(),
+    device: sanitizeText(task.device || '', 120),
+    solution: sanitizeMultiline(task.solution || task.note || '', 1200),
+    internalNote: sanitizeMultiline(task.internalNote || '', 1200),
+    createdAt: task.createdAt || new Date().toISOString(),
+    updatedAt: task.updatedAt || task.createdAt || new Date().toISOString()
+  };
+}
+
+function publicTask(task, includeInternal = false) {
+  const normalized = taskWithDefaults(task);
+  const statusLabels = {
+    successful: 'Sikeresen megoldva',
+    followup: 'Utánkövetés szükséges',
+    failed: 'Nem sikerült megoldani'
+  };
+  const result = statusLabels[normalized.status] || statusLabels.successful;
+  const publicShape = {
+    id: normalized.id,
+    userId: normalized.userId,
+    date: normalized.completedAt,
+    completedAt: normalized.completedAt,
+    helper: normalized.helper,
+    topic: normalized.topic,
+    status: normalized.status,
+    result,
+    successful: normalized.status === 'successful',
+    durationMinutes: normalized.durationMinutes,
+    device: normalized.device,
+    note: normalized.solution,
+    solution: normalized.solution,
+    createdAt: normalized.createdAt,
+    updatedAt: normalized.updatedAt
+  };
+  if (includeInternal) publicShape.internalNote = normalized.internalNote;
+  return publicShape;
+}
+
+function seedTasksForUser(user) {
+  return [
+    {
+      id: `seed-${user.id}-email`,
+      userId: user.id,
+      date: '2026-04-18T15:30:00.000Z',
+      completedAt: '2026-04-18T15:30:00.000Z',
+      helper: 'Nagy Péter',
+      topic: 'Email fiók beállítása',
+      status: 'successful',
+      result: 'Sikeresen megoldva',
+      successful: true,
+      durationMinutes: 28,
+      device: 'Windows laptop',
+      note: 'Postafiók újrakonfigurálva, teszt email sikeresen elküldve.',
+      solution: 'Postafiók újrakonfigurálva, teszt email sikeresen elküldve.'
+    },
+    {
+      id: `seed-${user.id}-update`,
+      userId: user.id,
+      date: '2026-05-09T09:10:00.000Z',
+      completedAt: '2026-05-09T09:10:00.000Z',
+      helper: 'Kovács Anna',
+      topic: 'Windows frissítési hiba',
+      status: 'successful',
+      result: 'Sikeresen megoldva',
+      successful: true,
+      durationMinutes: 46,
+      device: 'Asztali PC',
+      note: 'Frissítési gyorsítótár törölve, rendszer újraindítás után rendben működött.',
+      solution: 'Frissítési gyorsítótár törölve, rendszer újraindítás után rendben működött.'
+    },
+    {
+      id: `seed-${user.id}-printer`,
+      userId: user.id,
+      date: '2026-05-28T17:05:00.000Z',
+      completedAt: '2026-05-28T17:05:00.000Z',
+      helper: 'Szabó Márk',
+      topic: 'Nyomtató kapcsolat ellenőrzése',
+      status: 'followup',
+      result: 'Utánkövetés szükséges',
+      successful: false,
+      durationMinutes: 35,
+      device: 'Hálózati nyomtató',
+      note: 'Driver frissítve, a hálózati eszközt a helyszínen is ellenőrizni kell.',
+      solution: 'Driver frissítve, a hálózati eszközt a helyszínen is ellenőrizni kell.'
+    }
+  ];
+}
+
+function buildAccountOverview(user, tasks = []) {
+  const createdAt = user.createdAt ? new Date(user.createdAt) : new Date();
+  const renewalDate = new Date(createdAt);
+  renewalDate.setMonth(renewalDate.getMonth() + 1);
+
+  const userTasks = tasks
+    .filter(task => task.userId === user.id)
+    .map(task => publicTask(task))
+    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+  const history = userTasks.length ? userTasks : seedTasksForUser(user);
+
+  const solved = history.filter(item => item.successful).length;
+  const averageMinutes = history.length
+    ? Math.round(history.reduce((sum, item) => sum + item.durationMinutes, 0) / history.length)
+    : 0;
+
+  return {
+    user: publicUser(user),
+    subscription: {
+      plan: 'Pro támogatás',
+      status: 'Aktív',
+      renewalDate: renewalDate.toISOString(),
+      includedMinutes: 120,
+      usedMinutes: history.reduce((sum, item) => sum + item.durationMinutes, 0),
+      features: [
+        'Távoli segítségnyújtás elsőbbségi időpontokkal',
+        'Szoftveres hibaelhárítás és beállítás',
+        'Rövid biztonsági ellenőrzés minden munkamenet után'
+      ]
+    },
+    stats: {
+      solved,
+      total: history.length,
+      averageMinutes,
+      lastHelpAt: history[0]?.completedAt || history[0]?.date || null
+    },
+    history
+  };
+}
+
 function requireAuth(req, res, next) {
   if (!req.session?.user) {
     return res.status(401).json({ error: 'Nincs bejelentkezve.' });
@@ -137,6 +283,15 @@ async function ensureUsersDb() {
   }
 }
 
+async function ensureTasksDb() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.access(TASKS_DB_PATH);
+  } catch {
+    await fs.writeFile(TASKS_DB_PATH, JSON.stringify({ tasks: [] }, null, 2));
+  }
+}
+
 async function readUsers() {
   await ensureUsersDb();
   const raw = await fs.readFile(USERS_DB_PATH, 'utf-8');
@@ -144,8 +299,58 @@ async function readUsers() {
   return Array.isArray(parsed.users) ? parsed.users : [];
 }
 
+async function readTasks() {
+  await ensureTasksDb();
+  const raw = await fs.readFile(TASKS_DB_PATH, 'utf-8');
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.tasks) ? parsed.tasks.map(taskWithDefaults) : [];
+}
+
 async function writeUsers(users) {
   await fs.writeFile(USERS_DB_PATH, JSON.stringify({ users }, null, 2));
+}
+
+async function writeTasks(tasks) {
+  await fs.writeFile(TASKS_DB_PATH, JSON.stringify({ tasks: tasks.map(taskWithDefaults) }, null, 2));
+}
+
+function buildTaskFromRequest(body, existing = null) {
+  const now = new Date().toISOString();
+  const userId = sanitizeText(body?.userId, 80);
+  const helper = sanitizeText(body?.helper || 'Across-platform', 80);
+  const topic = sanitizeText(body?.topic, 120);
+  const status = ['successful', 'followup', 'failed'].includes(body?.status) ? body.status : 'successful';
+  const durationMinutes = Math.max(1, Math.min(24 * 60, Number.parseInt(body?.durationMinutes, 10) || 1));
+  const completedAtRaw = String(body?.completedAt || '').trim();
+  const completedAtDate = completedAtRaw ? new Date(completedAtRaw) : new Date();
+  const completedAt = Number.isNaN(completedAtDate.getTime()) ? now : completedAtDate.toISOString();
+  const device = sanitizeText(body?.device, 120);
+  const solution = sanitizeMultiline(body?.solution || body?.note, 1200);
+  const internalNote = sanitizeMultiline(body?.internalNote, 1200);
+
+  return taskWithDefaults({
+    ...(existing || {}),
+    id: existing?.id || crypto.randomUUID(),
+    userId,
+    helper,
+    topic,
+    status,
+    durationMinutes,
+    completedAt,
+    device,
+    solution,
+    internalNote,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  });
+}
+
+function validateTask(task, users) {
+  if (!users.some(user => user.id === task.userId)) return 'Válassz létező felhasználót.';
+  if (!task.topic || task.topic.length < 3) return 'Adj meg feladat témát.';
+  if (!task.helper || task.helper.length < 2) return 'Add meg, ki segített.';
+  if (!task.solution || task.solution.length < 3) return 'Írd le röviden a megoldást vagy az eredményt.';
+  return '';
 }
 
 async function ensureAdminUser() {
@@ -311,6 +516,21 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   return res.status(200).json({ user: req.session.user });
 });
 
+app.get('/api/account/overview', requireAuth, async (req, res) => {
+  try {
+    const users = (await readUsers()).map(userWithDefaults);
+    const user = users.find(u => u.id === req.session.user.id);
+    if (!user) return res.status(404).json({ error: 'Felhasználó nem található.' });
+    if (user.status !== 'active') return res.status(403).json({ error: 'A fiók inaktív.' });
+
+    const tasks = await readTasks();
+    return res.status(200).json(buildAccountOverview(user, tasks));
+  } catch (error) {
+    console.error('account overview error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
 app.post('/api/auth/request-reset', authLimiter, async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -389,6 +609,78 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
     return res.status(200).json({ users });
   } catch (error) {
     console.error('admin users error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.get('/api/admin/tasks', requireAdmin, async (req, res) => {
+  try {
+    const users = (await readUsers()).map(userWithDefaults).map(publicUser);
+    const userById = new Map(users.map(user => [user.id, user]));
+    const tasks = (await readTasks())
+      .map(task => ({
+        ...publicTask(task, true),
+        userName: userById.get(task.userId)?.name || 'Ismeretlen felhasználó',
+        userEmail: userById.get(task.userId)?.email || ''
+      }))
+      .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+    return res.status(200).json({ tasks });
+  } catch (error) {
+    console.error('admin tasks error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.post('/api/admin/tasks', requireAdmin, async (req, res) => {
+  try {
+    const users = (await readUsers()).map(userWithDefaults);
+    const task = buildTaskFromRequest(req.body);
+    const validationError = validateTask(task, users);
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    const tasks = await readTasks();
+    tasks.push(task);
+    await writeTasks(tasks);
+    return res.status(201).json({ ok: true, task: publicTask(task, true), message: 'Feladat rögzítve.' });
+  } catch (error) {
+    console.error('admin create task error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.put('/api/admin/tasks/:taskId', requireAdmin, async (req, res) => {
+  try {
+    const taskId = String(req.params.taskId || '');
+    const users = (await readUsers()).map(userWithDefaults);
+    const tasks = await readTasks();
+    const index = tasks.findIndex(task => task.id === taskId);
+    if (index < 0) return res.status(404).json({ error: 'Feladat nem található.' });
+
+    const task = buildTaskFromRequest(req.body, tasks[index]);
+    const validationError = validateTask(task, users);
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    tasks[index] = task;
+    await writeTasks(tasks);
+    return res.status(200).json({ ok: true, task: publicTask(task, true), message: 'Feladat frissítve.' });
+  } catch (error) {
+    console.error('admin update task error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.delete('/api/admin/tasks/:taskId', requireAdmin, async (req, res) => {
+  try {
+    const taskId = String(req.params.taskId || '');
+    const tasks = await readTasks();
+    const nextTasks = tasks.filter(task => task.id !== taskId);
+    if (nextTasks.length === tasks.length) return res.status(404).json({ error: 'Feladat nem található.' });
+
+    await writeTasks(nextTasks);
+    return res.status(200).json({ ok: true, message: 'Feladat törölve.' });
+  } catch (error) {
+    console.error('admin delete task error', error);
     return res.status(500).json({ error: 'Szerverhiba.' });
   }
 });
