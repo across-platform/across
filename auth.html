@@ -21,8 +21,8 @@
       <a href="services.html">Szolgáltatások</a>
       <a href="pricing.html">Árak</a>
       <a href="contact.html">Kapcsolat</a>
-      <a href="auth.html">Fiók</a>
-      <a href="auth.html#subscription" class="nav-subscription" hidden>Előfizetésem</a>
+      <a href="auth.html#login">Bejelentkezés</a>
+      <a href="auth.html#register">Regisztráció</a>
     </nav>
     <button id="nav-toggle" class="btn secondary nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menü megnyitása">☰</button>
     <button id="account-notify-btn" class="btn secondary nav-bell" type="button" aria-label="Üzenetértesítések" hidden>
@@ -40,12 +40,7 @@
         <div class="auth-heading">
           <p class="section-kicker">Fiókkezelés</p>
           <h2>Felhasználói fiók</h2>
-          <p class="auth-lead">Lépj be, hozz létre új fiókot, vagy állítsd vissza a hozzáférésed biztonságos jelszókezeléssel.</p>
-        </div>
-
-        <div class="auth-tabs" role="tablist" aria-label="Hitelesítés mód választása">
-          <button type="button" class="btn secondary auth-tab is-active" data-auth-tab="login" role="tab" aria-selected="true" aria-controls="auth-login-panel" id="auth-login-tab">Bejelentkezés</button>
-          <button type="button" class="btn secondary auth-tab" data-auth-tab="register" role="tab" aria-selected="false" aria-controls="auth-register-panel" id="auth-register-tab">Regisztráció</button>
+          <p class="auth-lead">Biztonságos belépés és új ügyfélfiók létrehozása az Across-platform felülethez.</p>
         </div>
 
         <div class="auth-status" id="auth-status" role="status" aria-live="polite"></div>
@@ -165,7 +160,7 @@
           </section>
         </div>
 
-        <div id="auth-login-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-login-tab">
+        <div id="auth-login-panel" class="auth-panel">
           <form id="login-form" novalidate>
             <div class="panel-heading">
               <h3>Bejelentkezés</h3>
@@ -200,7 +195,7 @@
           </form>
         </div>
 
-        <div id="auth-register-panel" class="auth-panel" role="tabpanel" aria-labelledby="auth-register-tab" hidden>
+        <div id="auth-register-panel" class="auth-panel" hidden>
           <form id="register-form" novalidate>
             <div class="panel-heading">
               <h3>Új fiók létrehozása</h3>

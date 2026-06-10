@@ -81,22 +81,50 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
-	async function revealAdminNavIfAllowed() {
+	async function revealPrivateNavIfAllowed() {
 		if (!isBackendOrigin) return;
 		const nav = document.querySelector('.navbar nav');
-		if (!nav || nav.querySelector('[data-admin-nav]')) return;
+		if (!nav) return;
 		try {
 			const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
 			const payload = await response.json().catch(() => ({}));
-			if (!response.ok || payload.user?.role !== 'admin') return;
-			const adminLink = document.createElement('a');
-			adminLink.href = 'admin.html';
-			adminLink.dataset.adminNav = 'true';
-			adminLink.textContent = 'Admin';
-			nav.appendChild(adminLink);
+			if (!response.ok || !payload.user) {
+				setPublicAuthNavVisibility(false);
+				return;
+			}
+			setPublicAuthNavVisibility(true);
+
+			if (payload.user.role !== 'admin' && !nav.querySelector('[data-subscription-nav]')) {
+				const subscriptionLink = document.createElement('a');
+				subscriptionLink.href = 'auth.html#subscription';
+				subscriptionLink.dataset.subscriptionNav = 'true';
+				subscriptionLink.textContent = 'Előfizetésem';
+				nav.appendChild(subscriptionLink);
+			}
+
+			if (payload.user.role === 'admin' && !nav.querySelector('[data-admin-nav]')) {
+				const adminLink = document.createElement('a');
+				adminLink.href = 'admin.html';
+				adminLink.dataset.adminNav = 'true';
+				adminLink.textContent = 'Admin';
+				nav.appendChild(adminLink);
+			}
 		} catch (err) {
-			/* anonymous visitors simply do not see the admin link */
+			setPublicAuthNavVisibility(false);
+			/* anonymous visitors simply do not see private nav links */
 		}
+	}
+
+	function removePrivateNavLinks() {
+		document.querySelectorAll('[data-subscription-nav], [data-admin-nav]').forEach(link => link.remove());
+		setPublicAuthNavVisibility(false);
+	}
+
+	function setPublicAuthNavVisibility(isLoggedIn) {
+		document.querySelectorAll('.navbar nav a[href="auth.html#register"]').forEach(link => {
+			link.hidden = isLoggedIn;
+			link.style.display = isLoggedIn ? 'none' : '';
+		});
 	}
 
 	async function syncGlobalBellVisibility() {
@@ -133,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	markActiveNav();
-	revealAdminNavIfAllowed().finally(() => {
+	revealPrivateNavIfAllowed().finally(() => {
 		markActiveNav();
 		syncGlobalBellVisibility().catch(() => {});
 	});
@@ -427,7 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		const accountMessageForm = document.getElementById('account-message-form');
 		const accountNotifyBtn = document.getElementById('account-notify-btn');
 		const accountNotifyBadge = document.getElementById('account-notify-badge');
-		const navSubscriptionLinks = document.querySelectorAll('.nav-subscription');
 		let latestAccountData = null;
 		let isAccountAuthenticated = false;
 		const ACCOUNT_LAST_SEEN_KEY = 'across-account-last-seen';
@@ -462,13 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		function writeAccountLastSeen(value) {
 			try { localStorage.setItem(ACCOUNT_LAST_SEEN_KEY, String(value)); } catch (err) { /* ignore */ }
-		}
-
-		function syncSubscriptionNavVisibility() {
-			navSubscriptionLinks.forEach(link => {
-				link.hidden = !isAccountAuthenticated;
-				link.style.display = isAccountAuthenticated ? '' : 'none';
-			});
 		}
 
 		function updateAccountNotifications(messages) {
@@ -552,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (tabsWrap) tabsWrap.hidden = isDashboard;
 			if (!isDashboard) {
 				if (panels.login) panels.login.hidden = false;
-				switchAuthTab('login');
+				switchAuthTab(initialAuthTab());
 			}
 		}
 
@@ -637,12 +657,9 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 
-		syncSubscriptionNavVisibility();
-
 		function renderAccountDashboard(data) {
 			latestAccountData = data;
 			isAccountAuthenticated = true;
-			syncSubscriptionNavVisibility();
 			const user = data.user || {};
 			const stats = data.stats || {};
 			const history = Array.isArray(data.history) ? data.history : [];
@@ -670,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			const { response, payload } = await authApiJson('/api/account/overview');
 			if (!response.ok) {
 				isAccountAuthenticated = false;
-				syncSubscriptionNavVisibility();
+				removePrivateNavLinks();
 				if (accountNotifyBtn) accountNotifyBtn.hidden = true;
 				if (accountNotifyBadge) accountNotifyBadge.hidden = true;
 				setAccountMode('forms');
@@ -706,15 +723,21 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		function switchAuthTab(tabName) {
+			const nextTab = panels[tabName] ? tabName : 'login';
 			tabs.forEach(btn => {
-				const isActive = btn.getAttribute('data-auth-tab') === tabName;
+				const isActive = btn.getAttribute('data-auth-tab') === nextTab;
 				btn.classList.toggle('is-active', isActive);
 				btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
 			});
-			if (panels.login) panels.login.hidden = tabName !== 'login';
-			if (panels.register) panels.register.hidden = tabName !== 'register';
-			if (tabName !== 'login') toggleForcePasswordForm(false);
+			if (panels.login) panels.login.hidden = nextTab !== 'login';
+			if (panels.register) panels.register.hidden = nextTab !== 'register';
+			if (nextTab !== 'login') toggleForcePasswordForm(false);
 			setAuthStatus('');
+		}
+
+		function initialAuthTab() {
+			const hash = (window.location.hash || '').replace('#', '');
+			return hash === 'register' ? 'register' : 'login';
 		}
 
 		async function requestPlanChange(planKey) {
@@ -734,7 +757,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		async function bootstrapAccount() {
 			isAccountAuthenticated = false;
-			syncSubscriptionNavVisibility();
 			if (!isBackendOrigin) {
 				setAccountMode('forms');
 				setAuthStatus('A fiókfelülethez a Node szerverről megnyitott oldalt használd.', 'error');
@@ -755,8 +777,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			btn.addEventListener('click', () => {
 				const tabName = btn.getAttribute('data-auth-tab');
 				if (!tabName) return;
+				if (history.replaceState) history.replaceState(null, '', `#${tabName}`);
 				switchAuthTab(tabName);
 			});
+		});
+
+		window.addEventListener('hashchange', () => {
+			if (accountDashboard && !accountDashboard.hidden) return;
+			switchAuthTab(initialAuthTab());
 		});
 
 		accountNavBtns.forEach(btn => {
@@ -799,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					if (!response.ok) return setAuthStatus(payload.error || 'A regisztráció nem sikerült. Kérlek próbáld újra.', 'error');
 					setAuthStatus('Sikeres regisztráció. Most jelentkezz be.', 'success');
 					registerForm.reset();
+					if (history.replaceState) history.replaceState(null, '', '#login');
 					switchAuthTab('login');
 				} catch (err) {
 					setAuthStatus('A biztonságos szerverkapcsolat most nem érhető el. Kérlek próbáld újra később.', 'error');
@@ -836,6 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
 						window.location.href = 'admin.html';
 					} else {
 						await loadAccountDashboard(true);
+						await revealPrivateNavIfAllowed();
+						markActiveNav();
 					}
 				} catch (err) {
 					setAuthStatus('A biztonságos szerverkapcsolat most nem érhető el. Kérlek próbáld újra később.', 'error');
@@ -974,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				await authApiJson('/api/auth/logout', { method: 'POST' });
 				latestAccountData = null;
 				isAccountAuthenticated = false;
-				syncSubscriptionNavVisibility();
+				removePrivateNavLinks();
 				if (accountNotifyBtn) accountNotifyBtn.hidden = true;
 				if (accountNotifyBadge) accountNotifyBadge.hidden = true;
 				setAccountMode('forms');
