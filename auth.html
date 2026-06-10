@@ -52,11 +52,12 @@
               <h3 id="account-greeting">Üdv újra!</h3>
               <p id="account-email" class="auth-hint"></p>
             </div>
-            <button id="account-logout" type="button" class="btn secondary">Kijelentkezés</button>
+            <button id="account-logout" type="button" class="btn account-logout-btn">Kijelentkezés</button>
           </div>
 
           <div class="account-menu" role="tablist" aria-label="Fiók menüpontok">
-            <button type="button" class="btn secondary account-nav-btn is-active" data-account-view="profile">Adatlap</button>
+            <button type="button" class="btn secondary account-nav-btn is-active" data-account-view="status">Aktuális állapot</button>
+            <button type="button" class="btn secondary account-nav-btn" data-account-view="profile">Adatlap</button>
             <button type="button" class="btn secondary account-nav-btn" data-account-view="settings">Beállítások</button>
             <button type="button" class="btn secondary account-nav-btn" data-account-view="stats">Statisztika</button>
             <button type="button" class="btn secondary account-nav-btn" data-account-view="worklog">Munkanapló</button>
@@ -64,7 +65,22 @@
             <button type="button" class="btn secondary account-nav-btn" data-account-view="messages">Üzenetek</button>
           </div>
 
-          <section id="account-profile-view" class="account-view account-panel">
+          <section id="account-status-view" class="account-view account-panel">
+            <div class="panel-heading">
+              <h3>Aktuális állapot</h3>
+            </div>
+            <div class="account-status-card">
+              <div>
+                <span id="account-status-badge" class="account-badge">Betöltés</span>
+                <h4 id="account-status-title">Állapot betöltése</h4>
+                <p id="account-status-description" class="auth-hint">Megnézzük, van-e aktív kérésed, üzeneted vagy lezárt munkád.</p>
+              </div>
+              <button type="button" id="account-status-action" class="btn secondary">Részletek</button>
+            </div>
+            <div id="account-status-steps" class="account-status-steps" aria-label="Aktuális folyamat lépései"></div>
+          </section>
+
+          <section id="account-profile-view" class="account-view account-panel" hidden>
             <div class="panel-heading">
               <h3>Adatlap</h3>
             </div>
@@ -110,15 +126,21 @@
           <section id="account-stats-view" class="account-view" hidden>
             <div id="account-overview" class="account-stats" aria-label="Fiók összesítő">
               <div class="account-stat">
+                <span class="stat-icon" aria-hidden="true">✓</span>
                 <span>Megoldott ügyek</span>
+                <small>Lezárt hibaelhárítás</small>
                 <strong id="account-solved">-</strong>
               </div>
               <div class="account-stat">
+                <span class="stat-icon" aria-hidden="true">I</span>
                 <span>Átlagos idő</span>
+                <small>Átlagos munkamenet</small>
                 <strong id="account-average-time">-</strong>
               </div>
               <div class="account-stat">
+                <span class="stat-icon" aria-hidden="true">U</span>
                 <span>Utolsó segítség</span>
+                <small>Legfrissebb lezárt munka</small>
                 <strong id="account-last-help">-</strong>
               </div>
             </div>
@@ -148,15 +170,21 @@
           </section>
 
           <section id="account-messages-view" class="account-view account-panel" hidden>
-            <div class="panel-heading">
-              <h3>Üzenetek</h3>
+            <div class="account-chat-shell">
+              <div class="account-chat-header">
+                <span class="chat-avatar" aria-hidden="true">AP</span>
+                <div>
+                  <h3>Üzenetek</h3>
+                  <p class="auth-hint">Közvetlen beszélgetés az Across-platform csapatával.</p>
+                </div>
+              </div>
+              <div id="account-message-list" class="message-list account-chat-thread"></div>
+              <form id="account-message-form" class="account-message-form" novalidate>
+                <label class="sr-only" for="account-message-body">Új üzenet</label>
+                <textarea id="account-message-body" name="message" rows="1" required placeholder="Írj üzenetet..."></textarea>
+                <button type="submit" class="btn">Küldés</button>
+              </form>
             </div>
-            <div id="account-message-list" class="message-list"></div>
-            <form id="account-message-form" class="auth-subpanel" novalidate>
-              <label for="account-message-body">Új üzenet</label>
-              <textarea id="account-message-body" name="message" rows="4" required placeholder="Írd le, miben segíthetünk."></textarea>
-              <button type="submit" class="btn">Üzenet küldése</button>
-            </form>
           </section>
         </div>
 

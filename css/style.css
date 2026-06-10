@@ -156,6 +156,7 @@ canvas {
 }
 
 .navbar .container {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -174,8 +175,8 @@ canvas {
 
 .site-logo {
   width: auto;
-  height: 46px;
-  max-width: min(320px, 32vw);
+  height: 56px;
+  max-width: min(380px, 36vw);
   object-fit: contain;
   display: block;
 }
@@ -615,15 +616,18 @@ html:not([data-theme="dark"]) .hero-concept h2 span {
 .admin-task-form,
 .admin-task-list-panel,
 .admin-toolbar,
-.admin-session,
+.admin-widget,
 .account-stat,
+.account-hero,
 .account-panel,
 .subscription-card,
 .history-item,
 .admin-task-item {
   border: 1px solid var(--border);
-  background: var(--surface-elevated);
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
 }
 
 .glass {
@@ -759,6 +763,12 @@ html:not([data-theme="dark"]) .hero-concept h2 span {
 .btn.danger {
   border-color: color-mix(in srgb, var(--danger) 42%, transparent);
   color: var(--danger);
+}
+
+.btn.compact {
+  min-height: 36px;
+  padding: 0.55rem 0.78rem;
+  font-size: 0.84rem;
 }
 
 .hero-buttons,
@@ -980,10 +990,36 @@ form button[type="submit"] {
 }
 
 /* Auth and account */
+#auth,
+#admin {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+#auth::before,
+#admin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.16), transparent 22rem),
+    radial-gradient(circle at 88% 10%, rgba(91, 110, 232, 0.16), transparent 24rem),
+    linear-gradient(125deg, transparent 0 58%, rgba(56, 189, 248, 0.05) 58% 59%, transparent 59%);
+  opacity: 0.86;
+  z-index: -1;
+}
+
 .auth-card {
   width: 100%;
   max-width: 980px;
   text-align: left;
+}
+
+.auth-card,
+.admin-card {
+  border-color: color-mix(in srgb, var(--border) 82%, transparent);
 }
 
 .auth-panel {
@@ -1053,7 +1089,18 @@ form button[type="submit"] {
 
 .account-dashboard {
   display: grid;
-  gap: 1rem;
+  gap: 1.05rem;
+  position: relative;
+  padding: clamp(0.65rem, 1.6vw, 1rem);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(56, 189, 248, 0.12), transparent 15rem),
+    radial-gradient(circle at 96% 2%, rgba(91, 110, 232, 0.14), transparent 18rem),
+    color-mix(in srgb, var(--surface-elevated) 52%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
 }
 
 .account-dashboard[hidden] {
@@ -1082,6 +1129,32 @@ form button[type="submit"] {
   border-radius: var(--radius);
 }
 
+.account-hero {
+  padding: clamp(1rem, 2vw, 1.35rem);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(56, 189, 248, 0.18), transparent 13rem),
+    radial-gradient(circle at 12% 0%, rgba(91, 110, 232, 0.12), transparent 11rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-elevated) 90%, transparent), color-mix(in srgb, var(--surface-soft) 72%, transparent));
+}
+
+.account-hero h3 {
+  margin-bottom: 0.18rem;
+  font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+}
+
+.account-logout-btn {
+  border-color: color-mix(in srgb, var(--danger) 46%, transparent);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.account-logout-btn:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
 .account-menu,
 .history-meta {
   display: flex;
@@ -1089,12 +1162,32 @@ form button[type="submit"] {
   gap: 0.55rem;
 }
 
+.account-menu {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-elevated) 72%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.account-menu .btn {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 0.55rem 0.85rem;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
 .account-menu .btn.is-active,
 .account-nav-btn.is-active {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), #38bdf8);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 12px 28px rgba(91, 110, 232, 0.24);
+  box-shadow: 0 14px 34px rgba(56, 189, 248, 0.22);
 }
 
 .account-stats,
@@ -1104,15 +1197,76 @@ form button[type="submit"] {
   gap: 0.75rem;
 }
 
+.account-stat,
+.admin-stat-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.28rem;
+  overflow: hidden;
+  min-height: 138px;
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, #38bdf8 18%, transparent), transparent 7rem),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-elevated) 92%, transparent), color-mix(in srgb, var(--surface-soft) 74%, transparent));
+}
+
+.account-stat::after,
+.admin-stat-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #38bdf8 60%, transparent), transparent);
+}
+
+.stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 0.25rem;
+  border: 1px solid color-mix(in srgb, #38bdf8 34%, transparent);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.26), transparent 42%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 86%, #38bdf8), #38bdf8);
+  color: #fff !important;
+  font-size: 0.92rem !important;
+  font-weight: 900;
+  box-shadow: 0 14px 32px rgba(56, 189, 248, 0.18);
+}
+
+.stat-icon.small {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0;
+  border-radius: 12px;
+  font-size: 0.78rem !important;
+}
+
 .account-stat span,
 .history-meta span {
   color: var(--text-light);
   font-size: 0.9rem;
 }
 
+.account-stat > span:not(.stat-icon),
+.admin-stat-card > span:not(.stat-icon) {
+  color: var(--text-dark);
+  font-weight: 850;
+}
+
+.account-stat small,
+.admin-stat-card small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
 .account-stat strong {
   display: block;
-  margin-top: 0.15rem;
+  margin-top: auto;
   color: var(--text-dark);
   font-size: 1.45rem;
 }
@@ -1164,6 +1318,69 @@ form button[type="submit"] {
   gap: 1rem;
 }
 
+.account-status-card,
+.account-status-step {
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.08), transparent 9rem),
+    color-mix(in srgb, var(--surface-soft) 78%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.account-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+}
+
+.account-status-card h4 {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 1.2rem;
+}
+
+.account-status-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.account-status-step {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 150px;
+  padding: 0.9rem;
+  border-radius: 18px;
+  opacity: 0.72;
+}
+
+.account-status-step.is-done {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  opacity: 1;
+}
+
+.account-status-step span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  background: var(--surface-elevated);
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.account-status-step strong {
+  line-height: 1.35;
+}
+
 .account-form-grid form,
 .account-settings-form {
   display: grid;
@@ -1179,36 +1396,115 @@ form button[type="submit"] {
   background: linear-gradient(180deg, var(--surface-elevated), var(--accent-soft));
 }
 
-.message-list {
+.account-chat-shell {
   display: grid;
-  gap: 0.75rem;
-  max-height: 520px;
+  grid-template-rows: auto minmax(320px, 1fr) auto;
+  min-height: min(680px, calc(100vh - 240px));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.10), transparent 13rem),
+    color-mix(in srgb, var(--surface-elevated) 80%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.account-chat-header {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
+}
+
+.account-chat-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.message-list,
+.account-chat-thread {
+  display: grid;
+  align-content: end;
+  gap: 0.45rem;
+  max-height: none;
   overflow: auto;
-  padding-right: 0.25rem;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 56%, transparent), transparent 44%),
+    color-mix(in srgb, var(--surface) 76%, transparent);
 }
 
 .message-item {
   display: grid;
-  gap: 0.35rem;
-  max-width: min(720px, 100%);
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  gap: 0.22rem;
+  max-width: min(72%, 620px);
+  padding: 0.72rem 0.92rem 0.5rem;
+  border: 0;
+  border-radius: 19px;
   background: var(--surface-soft);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .message-item.is-admin {
-  justify-self: end;
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
+  justify-self: start;
+  border-bottom-left-radius: 7px;
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+  color: var(--text-dark);
 }
 
 .message-item.is-user {
-  justify-self: start;
+  justify-self: end;
+  border-bottom-right-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), #38bdf8);
+  color: #fff;
 }
 
-.message-item strong {
-  font-size: 0.84rem;
+.message-item p {
+  margin: 0;
+  line-height: 1.48;
+}
+
+.message-item small {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.message-item.is-user small {
+  color: color-mix(in srgb, #fff 74%, transparent);
+}
+
+.account-message-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+  padding: 0.8rem;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+}
+
+.account-message-form textarea {
+  min-height: 44px;
+  max-height: 140px;
+  margin: 0;
+  resize: vertical;
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.account-message-form .btn {
+  min-height: 44px;
+  margin: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), #38bdf8);
+  color: #fff;
 }
 
 /* Admin */
@@ -1239,31 +1535,86 @@ form button[type="submit"] {
   box-shadow: 0 8px 18px rgba(255, 93, 132, 0.28);
 }
 
-.admin-card {
-  max-width: 1180px;
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 0.7rem);
+  right: 0;
+  z-index: 1200;
+  display: grid;
+  gap: 0.6rem;
+  width: min(340px, calc(100vw - 2rem));
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow);
 }
 
-.admin-session {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin: 0.5rem 0 1rem;
-  padding: 0.9rem 1rem;
-  border-radius: var(--radius);
+.notification-panel::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 1.1rem;
+  width: 12px;
+  height: 12px;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  background: var(--surface-elevated);
+  transform: rotate(45deg);
 }
 
-.admin-session-label {
-  display: block;
+.notification-item {
+  display: grid;
+  gap: 0.18rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--text-dark);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.notification-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.notification-title {
+  font-weight: 900;
+}
+
+.notification-body {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-light);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notification-item small {
   color: var(--muted);
-  font-size: 0.78rem;
   font-weight: 800;
-  text-transform: uppercase;
+}
+
+.admin-card {
+  max-width: 1320px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(56, 189, 248, 0.13), transparent 18rem),
+    radial-gradient(circle at 94% 12%, rgba(91, 110, 232, 0.16), transparent 20rem),
+    color-mix(in srgb, var(--surface-elevated) 88%, transparent);
 }
 
 .admin-app {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .admin-app[hidden],
@@ -1271,42 +1622,118 @@ form button[type="submit"] {
   display: none;
 }
 
+.admin-console-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.05rem 0 0.95rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.admin-console-top h3,
+.admin-toolbar h3 {
+  margin-bottom: 0;
+}
+
+.admin-console-top h3 {
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+  letter-spacing: 0;
+}
+
+.admin-console-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.admin-refresh-btn {
+  border-color: transparent;
+  background: linear-gradient(135deg, #38bdf8, var(--accent));
+  color: #fff;
+  box-shadow: 0 16px 36px rgba(56, 189, 248, 0.24);
+}
+
+.admin-refresh-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 42px rgba(56, 189, 248, 0.28);
+}
+
+.admin-logout-btn {
+  border-color: color-mix(in srgb, var(--danger) 46%, transparent);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.admin-logout-btn:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
 .admin-shell {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: 214px minmax(0, 1fr);
+  gap: 1.1rem;
   align-items: start;
+}
+
+.admin-rail {
+  min-width: 0;
 }
 
 .admin-side-nav {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.42rem;
   position: sticky;
   top: calc(var(--header-height) + 1rem);
+  padding: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-elevated) 68%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .admin-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 44px;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-elevated);
+  display: grid;
+  gap: 0.08rem;
+  min-height: 46px;
+  padding: 0.58rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
   color: var(--text-dark);
   cursor: pointer;
   font: inherit;
-  font-weight: 800;
-  line-height: 1;
+  line-height: 1.25;
   text-align: left;
-  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+  box-shadow: none;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.admin-nav-btn span {
+  font-weight: 800;
+}
+
+.admin-nav-btn small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-nav-btn.is-active,
 .admin-nav-btn:hover {
-  background: var(--accent-soft);
   border-color: var(--accent-border);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 86%, transparent), color-mix(in srgb, #38bdf8 11%, transparent));
+  box-shadow: 0 12px 28px rgba(56, 189, 248, 0.10);
 }
 
 .admin-nav-btn:hover {
@@ -1318,9 +1745,116 @@ form button[type="submit"] {
   min-width: 0;
 }
 
+.admin-main {
+  display: grid;
+  gap: 1rem;
+}
+
 .admin-view {
   display: grid;
   gap: 1rem;
+}
+
+.admin-dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-stat-card {
+  cursor: pointer;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow);
+}
+
+.admin-stat-card strong {
+  display: block;
+  margin-top: auto;
+  color: var(--text-dark);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  line-height: 1;
+}
+
+.admin-overview-widgets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.admin-widget {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+  min-height: 230px;
+  padding: 1rem;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.10), transparent 10rem),
+    color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+}
+
+.widget-heading {
+  display: flex;
+  gap: 0.72rem;
+  align-items: flex-start;
+}
+
+.widget-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.admin-widget-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.admin-widget-empty {
+  padding: 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
+
+.admin-widget-item {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.72rem;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-soft) 72%, transparent);
+}
+
+.admin-widget-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.admin-widget-item strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-dark);
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-widget-item small {
+  color: var(--text-light);
+  font-weight: 650;
+}
+
+.admin-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
 }
 
 .admin-toolbar {
@@ -1328,54 +1862,82 @@ form button[type="submit"] {
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
-  padding: 1rem;
-  border-radius: var(--radius);
+  padding: 1.1rem;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(56, 189, 248, 0.10), transparent 10rem),
+    color-mix(in srgb, var(--surface-elevated) 82%, transparent);
 }
 
 .admin-workspace,
 .admin-task-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+  grid-template-columns: minmax(310px, 0.82fr) minmax(420px, 1.18fr);
   gap: 1rem;
   align-items: start;
 }
 
 .admin-chat-shell {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: min(720px, calc(100vh - 220px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface-elevated) 84%, transparent);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .admin-chat-sidebar,
 .admin-chat-panel {
-  padding: 1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface-elevated);
+  min-height: 0;
+  background: transparent;
+}
+
+.admin-chat-sidebar {
+  overflow: auto;
+  border-right: 1px solid var(--border);
 }
 
 .admin-conversation-list {
   display: grid;
-  gap: 0.75rem;
 }
 
 .admin-conversation-item {
   display: grid;
-  gap: 0.2rem;
-  padding: 0.85rem;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  padding: 0.8rem 0.9rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dark);
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  font: inherit;
+  text-align: left;
+  transition: background 180ms ease;
 }
 
 .admin-conversation-item:hover,
 .admin-conversation-item.is-active {
-  transform: translateY(-1px);
-  border-color: var(--accent-border);
   background: var(--accent-soft);
+}
+
+.conversation-body {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.conversation-body > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-conversation-meta,
@@ -1402,22 +1964,109 @@ form button[type="submit"] {
 
 .admin-chat-panel {
   display: grid;
-  gap: 1rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .admin-chat-thread {
   display: grid;
-  gap: 0.75rem;
-  max-height: 420px;
+  align-content: end;
+  gap: 0.42rem;
   overflow: auto;
-  padding-right: 0.25rem;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 60%, transparent), transparent 42%),
+    var(--surface);
+}
+
+.admin-chat-header {
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+}
+
+.admin-chat-header > div {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.chat-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #38bdf8));
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.chat-avatar.small {
+  width: 38px;
+  height: 38px;
+  font-size: 0.76rem;
 }
 
 .admin-message-form {
   display: grid;
-  gap: 0.75rem;
-  padding-top: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+  padding: 0.75rem;
   border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+}
+
+.admin-message-form textarea {
+  min-height: 42px;
+  max-height: 130px;
+  resize: vertical;
+  border-radius: 22px;
+  padding: 0.72rem 1rem;
+  background: var(--surface);
+}
+
+.admin-message-form .btn {
+  border-radius: 999px;
+}
+
+.admin-chat-thread .message-item {
+  max-width: min(68%, 560px);
+  padding: 0.68rem 0.86rem 0.44rem;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.admin-chat-thread .message-item.is-admin {
+  border-bottom-right-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.admin-chat-thread .message-item.is-admin small {
+  color: color-mix(in srgb, #fff 72%, transparent);
+}
+
+.admin-chat-thread .message-item.is-user {
+  border-bottom-left-radius: 6px;
+  background: var(--surface-elevated);
+  color: var(--text-dark);
+}
+
+.admin-chat-thread .message-item p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.admin-chat-thread .message-item small {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .admin-select-card,
@@ -1425,8 +2074,8 @@ form button[type="submit"] {
 .admin-users-list,
 .admin-task-form,
 .admin-task-list-panel {
-  padding: 1rem;
-  border-radius: var(--radius);
+  padding: 1.1rem;
+  border-radius: 20px;
 }
 
 .admin-users-list li,
@@ -1438,8 +2087,41 @@ form button[type="submit"] {
 }
 
 .admin-users-list li {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, auto) auto;
   align-items: center;
+}
+
+.admin-search-input {
+  width: 100%;
+  margin: 0.35rem 0 0.85rem;
+}
+
+.admin-user-row {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-soft) 82%, transparent);
+}
+
+.admin-user-row.is-selected {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.admin-user-identity {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+}
+
+.admin-user-identity span {
+  overflow-wrap: anywhere;
+  color: var(--text-light);
+}
+
+.admin-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
 }
 
 .admin-user-meta,
@@ -1498,6 +2180,8 @@ form button[type="submit"] {
   .contact-grid,
   .admin-workspace,
   .admin-task-layout,
+  .admin-overview-widgets,
+  .admin-users-list li,
   .account-form-grid,
   .account-plan-options {
     grid-template-columns: 1fr;
@@ -1569,6 +2253,33 @@ form button[type="submit"] {
 
   #theme-toggle {
     display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-side-nav {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-nav-btn {
+    min-height: 44px;
+  }
+
+  .admin-nav-btn small {
+    display: none;
+  }
+
+  .account-menu {
+    width: 100%;
+  }
+
+  .account-menu .btn {
+    flex: 1 1 calc(50% - 0.55rem);
   }
 }
 
@@ -1704,36 +2415,79 @@ form button[type="submit"] {
 
   .hero-buttons .btn,
   .admin-row-actions .btn,
-  .admin-session .btn,
-  .account-menu .btn,
+  .admin-quick-actions .btn,
   .subscription-card .btn {
     width: 100%;
   }
 
+  .admin-console-actions .btn {
+    width: auto;
+  }
+
   .account-hero,
+  .account-status-card,
   .subscription-card,
   .history-item-header,
-  .admin-toolbar,
-  .admin-session {
+  .admin-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
 
   .account-stats,
   .admin-dashboard,
-  .admin-shell,
+  .admin-overview-widgets,
   .admin-form-grid,
-  .admin-chat-shell {
+  .admin-chat-shell,
+  .account-status-steps {
     grid-template-columns: 1fr;
+  }
+
+  .admin-console-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-console-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-chat-shell {
+    min-height: auto;
+  }
+
+  .admin-chat-sidebar {
+    max-height: 240px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .admin-chat-thread {
+    min-height: 360px;
+  }
+
+  .admin-chat-thread .message-item {
+    max-width: 86%;
   }
 
   .admin-side-nav {
     position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    padding: 0.35rem;
+  }
+
+  .admin-widget,
+  .admin-stat-card,
+  .account-stat {
+    min-height: auto;
   }
 
   .admin-users-list li {
     grid-template-columns: 1fr;
+  }
+
+  .admin-user-actions {
+    justify-content: flex-start;
   }
 }
 

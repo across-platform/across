@@ -38,17 +38,15 @@
     <div class="container">
       <div class="glass auth-card admin-card">
         <div class="auth-heading admin-heading">
-          <p class="section-kicker">Adminisztráció</p>
-          <h2>Admin hozzáférés</h2>
-          <p class="auth-lead">A kezelőfelület kizárólag admin jogosultságú belépés után jelenik meg.</p>
+          <h2>Admin felület</h2>
         </div>
 
         <div id="admin-status" class="auth-status" role="status" aria-live="polite"></div>
 
         <form id="admin-login-form" novalidate>
           <div class="panel-heading">
-            <h3>Admin belépés</h3>
-            <p class="auth-hint">Az admin műveletekhez jelentkezz be admin jogosultságú fiókkal.</p>
+            <h3>Belépés</h3>
+            <p class="auth-hint">Admin fiókkal.</p>
           </div>
 
           <label for="admin-login-email">Email cím</label>
@@ -57,16 +55,8 @@
           <label for="admin-login-password">Jelszó</label>
           <input id="admin-login-password" name="password" type="password" autocomplete="current-password" required placeholder="Admin jelszó">
 
-          <button type="submit" class="btn">Belépés admin felületre</button>
+          <button type="submit" class="btn">Belépés</button>
         </form>
-
-        <div class="admin-session" aria-label="Aktuális admin munkamenet">
-          <div>
-            <span class="admin-session-label">Munkamenet</span>
-            <p id="admin-session-user">Betöltés...</p>
-          </div>
-          <button id="admin-logout" type="button" class="btn secondary">Kijelentkezés</button>
-        </div>
 
         <form id="admin-force-password-form" novalidate hidden>
           <div class="panel-heading">
@@ -83,75 +73,119 @@
           <button type="submit" class="btn">Jelszó cseréje</button>
         </form>
 
-        <div id="admin-app" class="admin-app" hidden>
-          <div class="admin-dashboard" aria-label="Admin áttekintés">
-            <div class="account-stat">
-              <span>Felhasználók</span>
-              <strong id="admin-stat-users">-</strong>
-            </div>
-            <div class="account-stat">
-              <span>Elvégzett feladatok</span>
-              <strong id="admin-stat-tasks">-</strong>
-            </div>
-            <div class="account-stat">
-              <span>Sikeres megoldások</span>
-              <strong id="admin-stat-success">-</strong>
+        <div id="admin-app" class="admin-app admin-console" hidden>
+          <div class="admin-console-top">
+            <h3>Admin</h3>
+            <div class="admin-console-actions">
+              <button id="admin-refresh-all" type="button" class="btn admin-refresh-btn">Frissítés</button>
+              <button id="admin-logout" type="button" class="btn admin-logout-btn">Kijelentkezés</button>
             </div>
           </div>
 
           <div class="admin-shell">
-            <nav class="admin-side-nav" aria-label="Admin menü">
-              <button type="button" class="admin-nav-btn is-active" data-admin-view="users">Felhasználók</button>
-              <button type="button" class="admin-nav-btn" data-admin-view="tasks">Elvégzett feladatok</button>
-              <button type="button" class="admin-nav-btn" data-admin-view="requests">Csomagkérelmek</button>
-              <button type="button" class="admin-nav-btn" data-admin-view="messages">Üzenetek</button>
-            </nav>
+            <aside class="admin-rail" aria-label="Admin menü">
+              <nav class="admin-side-nav">
+                <button type="button" class="admin-nav-btn is-active" data-admin-view="overview"><span>Áttekintés</span><small>Napi állapot</small></button>
+                <button type="button" class="admin-nav-btn" data-admin-view="users"><span>Ügyfelek</span><small>Fiókok és hozzáférések</small></button>
+                <button type="button" class="admin-nav-btn" data-admin-view="tasks"><span>Munkanapló</span><small>Elvégzett feladatok</small></button>
+                <button type="button" class="admin-nav-btn" data-admin-view="contacts"><span>Megkeresések</span><small>Kapcsolat űrlap</small></button>
+                <button type="button" class="admin-nav-btn" data-admin-view="requests"><span>Csomagkérelmek</span><small>Jóváhagyás, elutasítás</small></button>
+                <button type="button" class="admin-nav-btn" data-admin-view="messages"><span>Üzenetközpont</span><small>Ügyfél válaszok</small></button>
+              </nav>
+            </aside>
 
             <div class="admin-main">
-              <section id="admin-users-view" class="admin-view">
+              <section id="admin-overview-view" class="admin-view">
+                <div class="admin-dashboard" aria-label="Admin áttekintés">
+                  <button type="button" class="account-stat admin-stat-card" data-admin-shortcut="users">
+                    <span class="stat-icon" aria-hidden="true">Ü</span>
+                    <span>Ügyfelek</span>
+                    <small>Regisztrált fiókok</small>
+                    <strong id="admin-stat-users">-</strong>
+                  </button>
+                  <button type="button" class="account-stat admin-stat-card" data-admin-shortcut="tasks">
+                    <span class="stat-icon" aria-hidden="true">M</span>
+                    <span>Munkanapló</span>
+                    <small>Rögzített munkák</small>
+                    <strong id="admin-stat-tasks">-</strong>
+                  </button>
+                  <button type="button" class="account-stat admin-stat-card" data-admin-shortcut="tasks">
+                    <span class="stat-icon" aria-hidden="true">✓</span>
+                    <span>Sikeres megoldások</span>
+                    <small>Lezárt hibaelhárítás</small>
+                    <strong id="admin-stat-success">-</strong>
+                  </button>
+                </div>
+
+                <div class="admin-overview-widgets">
+                  <article class="admin-widget">
+                    <div class="widget-heading">
+                      <span class="stat-icon small" aria-hidden="true">K</span>
+                      <div>
+                        <h3>Legutóbbi megkeresések</h3>
+                        <p class="auth-hint">Kapcsolat űrlapról érkező friss kérések.</p>
+                      </div>
+                    </div>
+                    <div id="admin-recent-contacts" class="admin-widget-list"></div>
+                  </article>
+
+                  <article class="admin-widget">
+                    <div class="widget-heading">
+                      <span class="stat-icon small" aria-hidden="true">W</span>
+                      <div>
+                        <h3>Legutóbbi munkák</h3>
+                        <p class="auth-hint">Frissen lezárt vagy frissített munkanapló bejegyzések.</p>
+                      </div>
+                    </div>
+                    <div id="admin-recent-tasks" class="admin-widget-list"></div>
+                  </article>
+
+                  <article class="admin-widget">
+                    <div class="widget-heading">
+                      <span class="stat-icon small" aria-hidden="true">A</span>
+                      <div>
+                        <h3>Aktív ügyfelek</h3>
+                        <p class="auth-hint">Elérhető ügyfélfiókok gyors áttekintése.</p>
+                      </div>
+                    </div>
+                    <div id="admin-active-clients" class="admin-widget-list"></div>
+                  </article>
+
+                  <article class="admin-widget">
+                    <div class="widget-heading">
+                      <span class="stat-icon small" aria-hidden="true">S</span>
+                      <div>
+                        <h3>Rendszer állapot</h3>
+                        <p class="auth-hint">Admin modulok és adatkapcsolatok állapota.</p>
+                      </div>
+                    </div>
+                    <div id="admin-system-state" class="admin-widget-list"></div>
+                  </article>
+                </div>
+
+                <p id="admin-session-user" class="sr-only">Betöltés...</p>
+              </section>
+
+              <section id="admin-users-view" class="admin-view" hidden>
                 <div class="admin-toolbar">
                   <div>
-                    <h3>Felhasználók</h3>
+                    <p class="section-kicker">Ügyfélkezelés</p>
+                    <h3>Ügyfelek és hozzáférések</h3>
                     <p class="auth-hint">Hozzáférések, jelszó-visszaállítás és fiókállapot kezelése.</p>
                   </div>
                   <button id="admin-refresh-users" type="button" class="btn secondary">Frissítés</button>
                 </div>
 
-                <div class="admin-workspace">
-                  <form id="admin-select-form" class="admin-select-card" novalidate>
-                    <div>
-                      <label for="admin-user-select">Felhasználó kiválasztása</label>
-                      <p class="auth-hint">A kijelölt felhasználón futnak az alábbi műveletek.</p>
-                    </div>
-                    <select id="admin-user-select" required></select>
-                    <div id="admin-selected-summary" class="admin-selected-summary" aria-live="polite"></div>
-                  </form>
-
-                  <div class="admin-actions">
-                    <form id="admin-password-form" novalidate>
-                      <h3>Jelszókezelés</h3>
-                      <p class="auth-hint">Az új jelszó után a felhasználónak a következő belépéskor saját jelszót kell választania.</p>
-                      <label for="admin-new-password">Ideiglenes új jelszó</label>
-                      <input id="admin-new-password" name="newPassword" type="password" autocomplete="new-password" minlength="12" required placeholder="Új erős jelszó">
-                      <button type="submit" class="btn">Jelszó módosítása</button>
-                    </form>
-
-                    <div class="admin-row-actions" aria-label="Felhasználói műveletek">
-                      <button id="admin-disable-user" type="button" class="btn secondary">Fiók letiltása</button>
-                      <button id="admin-restore-user" type="button" class="btn secondary">Fiók visszaállítása</button>
-                      <button id="admin-generate-token" type="button" class="btn secondary">Reset token generálás</button>
-                      <button id="admin-delete-user" type="button" class="btn secondary danger">Fiók törlése</button>
-                    </div>
-
-                    <p id="admin-token-output" class="auth-hint admin-token-output"></p>
-                  </div>
-                </div>
-
                 <div class="admin-users-list">
                   <div class="panel-heading">
                     <h3>Felhasználói lista</h3>
-                    <p class="auth-hint">Gyors áttekintés az elérhető fiókokról és állapotukról.</p>
+                    <p class="auth-hint">Keress ügyfelet név, email, szerepkör vagy állapot alapján, majd kezeld közvetlenül a sorból.</p>
                   </div>
+                  <label class="sr-only" for="admin-user-search">Felhasználó keresése</label>
+                  <input id="admin-user-search" class="admin-search-input" type="search" autocomplete="off" placeholder="Keresés név, email, szerepkör vagy állapot szerint...">
+                  <select id="admin-user-select" hidden></select>
+                  <div id="admin-selected-summary" class="sr-only" aria-live="polite"></div>
+                  <p id="admin-token-output" class="auth-hint admin-token-output"></p>
                   <ul id="admin-users"></ul>
                 </div>
               </section>
@@ -159,6 +193,7 @@
               <section id="admin-tasks-view" class="admin-view" hidden>
                 <div class="admin-toolbar">
                   <div>
+                    <p class="section-kicker">Munkanapló</p>
                     <h3>Elvégzett feladatok</h3>
                     <p class="auth-hint">Részletes munkanapló: ügyfél, segítő, eredmény, időtartam és megoldási leírás.</p>
                   </div>
@@ -231,9 +266,22 @@
                 </div>
               </section>
 
+              <section id="admin-contacts-view" class="admin-view" hidden>
+                <div class="admin-toolbar">
+                  <div>
+                    <p class="section-kicker">Kapcsolat</p>
+                    <h3>Megkeresések</h3>
+                    <p class="auth-hint">A Kapcsolat oldalról érkező érdeklődések és segítségkérések kezelése.</p>
+                  </div>
+                  <button id="admin-refresh-contacts" type="button" class="btn secondary">Frissítés</button>
+                </div>
+                <div id="admin-contact-list" class="admin-task-list"></div>
+              </section>
+
               <section id="admin-requests-view" class="admin-view" hidden>
                 <div class="admin-toolbar">
                   <div>
+                    <p class="section-kicker">Előfizetések</p>
                     <h3>Csomagkérelmek</h3>
                     <p class="auth-hint">Ügyfelek csomagmódosítási kérelmei, jóváhagyás és elutasítás egy helyen.</p>
                   </div>
@@ -243,36 +291,32 @@
               </section>
 
               <section id="admin-messages-view" class="admin-view" hidden>
-                <div class="admin-toolbar">
+                <div class="admin-toolbar message-toolbar">
                   <div>
-                    <h3>Üzenetek</h3>
-                    <p class="auth-hint">Chat-szerű üzenetváltás az ügyfélfiókok és az admin között.</p>
+                    <p class="section-kicker">Kommunikáció</p>
+                    <h3>Üzenetközpont</h3>
                   </div>
-                  <button id="admin-refresh-messages" type="button" class="btn secondary">Frissítés</button>
+                  <button id="admin-refresh-messages" type="button" class="btn secondary compact">Frissítés</button>
                 </div>
-                <div class="admin-chat-shell">
+                <div class="admin-chat-shell imessage-shell">
                   <aside class="admin-chat-sidebar">
-                    <div class="panel-heading">
-                      <h3>Beszélgetések</h3>
-                      <p class="auth-hint">Az új üzeneteket a harang ikon jelzi.</p>
-                    </div>
                     <div id="admin-conversation-list" class="admin-conversation-list"></div>
                   </aside>
                   <div class="admin-chat-panel">
                     <div class="admin-chat-header">
+                      <span class="chat-avatar" aria-hidden="true">AP</span>
                       <div>
-                        <p class="section-kicker">Aktuális beszélgetés</p>
-                        <strong id="admin-chat-user">Válassz ügyfelet</strong>
+                        <strong id="admin-chat-user">Válassz beszélgetést</strong>
+                        <span id="admin-chat-subtitle" class="auth-hint">Az üzenetek itt jelennek meg.</span>
                       </div>
-                      <span id="admin-chat-subtitle" class="auth-hint">A válaszok itt jelennek meg.</span>
                     </div>
                     <div id="admin-message-list" class="admin-chat-thread"></div>
                     <form id="admin-message-form" class="admin-message-form" novalidate>
-                      <label for="admin-message-user">Ügyfél</label>
-                      <select id="admin-message-user" name="userId" required></select>
-                      <label for="admin-message-body">Üzenet</label>
-                      <textarea id="admin-message-body" name="message" rows="4" required placeholder="Írd meg az ügyfélnek szánt választ."></textarea>
-                      <button type="submit" class="btn">Válasz küldése</button>
+                      <label class="sr-only" for="admin-message-user">Ügyfél</label>
+                      <select id="admin-message-user" name="userId" required hidden></select>
+                      <label class="sr-only" for="admin-message-body">Üzenet</label>
+                      <textarea id="admin-message-body" name="message" rows="1" required placeholder="Üzenet"></textarea>
+                      <button type="submit" class="btn compact">Küldés</button>
                     </form>
                   </div>
                 </div>

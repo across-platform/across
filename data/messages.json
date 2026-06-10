@@ -15,6 +15,38 @@
       "senderName": "Admin",
       "body": "hi",
       "createdAt": "2026-06-10T07:14:26.556Z"
+    },
+    {
+      "id": "d15b9a10-9b89-4da2-a1e7-048c0369bb2a",
+      "userId": "49cd9644-d6d5-4934-abf6-863234575b99",
+      "senderRole": "user",
+      "senderName": "Teszt Elek",
+      "body": "Kevés akeksz a szekrényben",
+      "createdAt": "2026-06-10T19:14:48.854Z"
+    },
+    {
+      "id": "7ea38738-4afd-4a5d-b75e-fe29276ec522",
+      "userId": "49cd9644-d6d5-4934-abf6-863234575b99",
+      "senderRole": "admin",
+      "senderName": "Admin",
+      "body": "fasza",
+      "createdAt": "2026-06-10T19:15:24.118Z"
+    },
+    {
+      "id": "c8decd2b-2ca5-421d-90fd-92306d2d5ffe",
+      "userId": "49cd9644-d6d5-4934-abf6-863234575b99",
+      "senderRole": "admin",
+      "senderName": "Admin",
+      "body": "blablabla",
+      "createdAt": "2026-06-10T20:10:15.375Z"
+    },
+    {
+      "id": "f6367316-d191-4a21-ac42-e27e3996bd74",
+      "userId": "49cd9644-d6d5-4934-abf6-863234575b99",
+      "senderRole": "user",
+      "senderName": "Teszt Elek",
+      "body": "kjlkj",
+      "createdAt": "2026-06-10T20:58:44.948Z"
     }
   ]
 }

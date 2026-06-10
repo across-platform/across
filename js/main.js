@@ -106,9 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			if (payload.user.role !== 'admin' && !nav.querySelector('[data-subscription-nav]')) {
 				const subscriptionLink = document.createElement('a');
-				subscriptionLink.href = 'auth.html#subscription';
+				subscriptionLink.href = 'auth.html#account-status';
 				subscriptionLink.dataset.subscriptionNav = 'true';
-				subscriptionLink.textContent = 'Előfizetésem';
+				subscriptionLink.textContent = 'Ügyfélportál';
 				nav.appendChild(subscriptionLink);
 			}
 
@@ -130,16 +130,83 @@ document.addEventListener('DOMContentLoaded', () => {
 		setPublicAuthNavVisibility(false);
 	}
 
-	function setPublicAuthNavVisibility(isLoggedIn) {
-		document.querySelectorAll('.navbar nav a[href="auth.html#login"], .navbar nav a[href="auth.html#register"]').forEach(link => {
-			link.hidden = isLoggedIn;
-			link.style.display = isLoggedIn ? 'none' : '';
-		});
-	}
+		function setPublicAuthNavVisibility(isLoggedIn) {
+			document.querySelectorAll('.navbar nav a[href="auth.html#login"], .navbar nav a[href="auth.html#register"]').forEach(link => {
+				link.hidden = isLoggedIn;
+				link.style.display = isLoggedIn ? 'none' : '';
+			});
+		}
 
-	async function syncGlobalBellVisibility() {
-		const bell = document.getElementById('global-notify-btn');
-		const badge = document.getElementById('global-notify-badge');
+		function createTextEl(tagName, className, text) {
+			const el = document.createElement(tagName);
+			if (className) el.className = className;
+			el.textContent = text || '';
+			return el;
+		}
+
+		function formatNotificationDate(value) {
+			if (!value) return '';
+			try {
+				return new Intl.DateTimeFormat('hu-HU', {
+					month: '2-digit',
+					day: '2-digit',
+					hour: '2-digit',
+					minute: '2-digit'
+				}).format(new Date(value));
+			} catch (err) {
+				return '';
+			}
+		}
+
+		function closeNotificationPanels() {
+			document.querySelectorAll('.notification-panel').forEach(panel => panel.remove());
+			document.querySelectorAll('.nav-bell[aria-expanded="true"]').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
+		}
+
+		function showNotificationPanel(anchorBtn, items, emptyText = 'Nincs új értesítés.') {
+			if (!anchorBtn) return;
+			const alreadyOpen = anchorBtn.getAttribute('aria-expanded') === 'true';
+			closeNotificationPanels();
+			if (alreadyOpen) return;
+
+			const panel = document.createElement('div');
+			panel.className = 'notification-panel';
+			panel.setAttribute('role', 'menu');
+			const heading = document.createElement('strong');
+			heading.textContent = 'Értesítések';
+			panel.appendChild(heading);
+
+			if (!items.length) {
+				panel.appendChild(createTextEl('p', 'auth-hint', emptyText));
+			} else {
+				items.slice(0, 8).forEach(item => {
+					const button = document.createElement('button');
+					button.type = 'button';
+					button.className = 'notification-item';
+					button.replaceChildren(
+						createTextEl('span', 'notification-title', item.title),
+						createTextEl('span', 'notification-body', item.body),
+						createTextEl('small', '', item.time || '')
+					);
+					button.addEventListener('click', () => {
+						closeNotificationPanels();
+						if (typeof item.onClick === 'function') {
+							item.onClick();
+						} else if (item.href) {
+							window.location.href = item.href;
+						}
+					});
+					panel.appendChild(button);
+				});
+			}
+
+			anchorBtn.setAttribute('aria-expanded', 'true');
+			anchorBtn.insertAdjacentElement('afterend', panel);
+		}
+
+		async function syncGlobalBellVisibility() {
+			const bell = document.getElementById('global-notify-btn');
+			const badge = document.getElementById('global-notify-badge');
 		if (!bell) return;
 		if (!isBackendOrigin) {
 			bell.hidden = true;
@@ -151,11 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
 			return;
 		}
 		try {
-			const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
-			const payload = await response.json().catch(() => ({}));
-			const isLoggedIn = response.ok && Boolean(payload.user);
-			bell.hidden = !isLoggedIn;
-			bell.style.display = isLoggedIn ? '' : 'none';
+				const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+				const payload = await response.json().catch(() => ({}));
+				const isLoggedIn = response.ok && Boolean(payload.user);
+				bell.hidden = !isLoggedIn;
+				bell.style.display = isLoggedIn ? '' : 'none';
 			if (badge) {
 				badge.hidden = true;
 				badge.style.display = 'none';
@@ -167,10 +234,71 @@ document.addEventListener('DOMContentLoaded', () => {
 				badge.hidden = true;
 				badge.style.display = 'none';
 			}
+			}
 		}
-	}
 
-	markActiveNav();
+		document.addEventListener('click', (event) => {
+			if (!event.target.closest('.nav-bell') && !event.target.closest('.notification-panel')) {
+				closeNotificationPanels();
+			}
+		});
+
+		const globalNotifyBtn = document.getElementById('global-notify-btn');
+		if (globalNotifyBtn) {
+			globalNotifyBtn.addEventListener('click', async (event) => {
+				event.stopPropagation();
+				try {
+					const meResponse = await fetch('/api/auth/me', { credentials: 'same-origin' });
+					const mePayload = await meResponse.json().catch(() => ({}));
+					if (!meResponse.ok || !mePayload.user) return showNotificationPanel(globalNotifyBtn, []);
+					const isAdmin = mePayload.user.role === 'admin';
+					const messageResponse = await fetch(isAdmin ? '/api/admin/messages' : '/api/account/messages', { credentials: 'same-origin' });
+					const messagePayload = await messageResponse.json().catch(() => ({}));
+					const messages = Array.isArray(messagePayload.messages) ? messagePayload.messages : [];
+					const messageItems = messages
+						.filter(message => isAdmin ? message.senderRole === 'user' : message.senderRole === 'admin')
+						.map(message => ({
+						title: isAdmin ? 'Új ügyfélüzenet' : 'Admin válasz érkezett',
+						body: message.body || 'Üzenet',
+						time: formatNotificationDate(message.createdAt),
+						timestamp: new Date(message.createdAt).getTime(),
+						href: isAdmin ? 'admin.html#messages' : 'auth.html#account-messages'
+					}));
+					let requestItems = [];
+					let contactItems = [];
+					if (isAdmin) {
+						const requestResponse = await fetch('/api/admin/plan-requests', { credentials: 'same-origin' });
+						const requestPayload = await requestResponse.json().catch(() => ({}));
+						requestItems = (Array.isArray(requestPayload.requests) ? requestPayload.requests : [])
+							.filter(request => request.status === 'pending')
+							.map(request => ({
+								title: 'Új csomagmódosítási kérelem',
+								body: `${request.userName || 'Ügyfél'}: ${request.currentPlanName || request.currentPlan} -> ${request.requestedPlanName || request.requestedPlan}`,
+								time: formatNotificationDate(request.createdAt),
+								timestamp: new Date(request.createdAt).getTime(),
+								href: 'admin.html#requests'
+							}));
+						const contactResponse = await fetch('/api/admin/contact-requests', { credentials: 'same-origin' });
+						const contactPayload = await contactResponse.json().catch(() => ({}));
+						contactItems = (Array.isArray(contactPayload.requests) ? contactPayload.requests : [])
+							.filter(request => request.status === 'new')
+							.map(request => ({
+								title: 'Új kapcsolatfelvétel',
+								body: `${request.name}: ${request.message || 'Megkeresés'}`,
+								time: formatNotificationDate(request.createdAt),
+								timestamp: new Date(request.createdAt).getTime(),
+								href: 'admin.html#contacts'
+							}));
+					}
+					const items = [...contactItems, ...requestItems, ...messageItems].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+					showNotificationPanel(globalNotifyBtn, items);
+				} catch (err) {
+					showNotificationPanel(globalNotifyBtn, []);
+				}
+			});
+		}
+
+		markActiveNav();
 	revealPrivateNavIfAllowed().finally(() => {
 		markActiveNav();
 		syncGlobalBellVisibility().catch(() => {});
@@ -394,44 +522,80 @@ document.addEventListener('DOMContentLoaded', () => {
 		if (btn) btn.disabled = !!disabled;
 	}
 
-	const contactForm = document.getElementById('contact-form');
-	if (contactForm) {
-		contactForm.addEventListener('submit', (e) => {
-			e.preventDefault();
-
-			const name = contactForm.querySelector('input[name="name"]')?.value?.trim() || '';
-			const email = contactForm.querySelector('input[name="email"]')?.value?.trim() || '';
-			const message = contactForm.querySelector('textarea[name="message"]')?.value?.trim() || '';
-
-			if (!name) {
-				alert('Kérlek add meg a neved.');
-				return;
-			}
-			if (!email || !emailPattern.test(email)) {
-				alert('Kérlek adj meg egy érvényes email címet.');
-				return;
-			}
-			if (!message) {
-				alert('Kérlek írj üzenetet.');
-				return;
+		const contactForm = document.getElementById('contact-form');
+		if (contactForm) {
+			const contactStatus = document.getElementById('contact-status');
+			function setContactStatus(message, tone) {
+				if (!contactStatus) return;
+				contactStatus.textContent = message || '';
+				contactStatus.classList.remove('is-error', 'is-success');
+				if (tone === 'error') contactStatus.classList.add('is-error');
+				if (tone === 'success') contactStatus.classList.add('is-success');
 			}
 
-			const recipient = contactForm.getAttribute('data-contact-email') || 'info@across-platform.hu';
-			const subject = 'Új kapcsolatfelvétel az across-platform oldalról';
-			const body = [
-				`Név: ${name}`,
-				`Email: ${email}`,
-				'',
-				'Üzenet:',
-				message
-			].join('\n');
-			const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+			function openContactMailFallback(name, email, message) {
+				const recipient = contactForm.getAttribute('data-contact-email') || 'info@across-platform.hu';
+				const subject = 'Új kapcsolatfelvétel az across-platform oldalról';
+				const body = [
+					`Név: ${name}`,
+					`Email: ${email}`,
+					'',
+					'Üzenet:',
+					message
+				].join('\n');
+				const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+				window.location.href = mailtoUrl;
+			}
 
-			window.location.href = mailtoUrl;
-			alert('Megnyitottuk az email kliensedet az előtöltött üzenettel.');
-			contactForm.reset();
-		});
-	}
+			contactForm.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				setContactStatus('');
+
+				const name = contactForm.querySelector('input[name="name"]')?.value?.trim() || '';
+				const email = contactForm.querySelector('input[name="email"]')?.value?.trim() || '';
+				const message = contactForm.querySelector('textarea[name="message"]')?.value?.trim() || '';
+
+				if (!name) {
+					setContactStatus('Kérlek add meg a neved.', 'error');
+					return;
+				}
+				if (!email || !emailPattern.test(email)) {
+					setContactStatus('Kérlek adj meg egy érvényes email címet.', 'error');
+					return;
+				}
+				if (!message) {
+					setContactStatus('Kérlek írj üzenetet.', 'error');
+					return;
+				}
+
+				setSubmitDisabled(contactForm, true);
+				try {
+					const response = await fetch('/api/contact-requests', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ name, email, message })
+					});
+					const payload = await response.json().catch(() => ({}));
+					if (!response.ok) {
+						if ([404, 405].includes(response.status)) {
+							openContactMailFallback(name, email, message);
+							setContactStatus('Az online beküldés itt nem érhető el, ezért megnyitottuk az email kliensedet.', 'success');
+							contactForm.reset();
+							return;
+						}
+						setContactStatus(payload.error || 'A megkeresés elküldése nem sikerült.', 'error');
+						return;
+					}
+					setContactStatus(payload.message || 'Megkeresés elküldve. Hamarosan jelentkezünk.', 'success');
+					contactForm.reset();
+				} catch (err) {
+					openContactMailFallback(name, email, message);
+					setContactStatus('A szerver most nem érhető el, ezért megnyitottuk az email kliensedet.', 'error');
+				} finally {
+					setSubmitDisabled(contactForm, false);
+				}
+			});
+		}
 
 	const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{12,}$/;
 
@@ -460,6 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const accountLogoutBtn = document.getElementById('account-logout');
 		const accountNavBtns = authRoot.querySelectorAll('.account-nav-btn');
 		const accountViews = {
+			status: document.getElementById('account-status-view'),
 			profile: document.getElementById('account-profile-view'),
 			settings: document.getElementById('account-settings-view'),
 			stats: document.getElementById('account-stats-view'),
@@ -471,6 +636,11 @@ document.addEventListener('DOMContentLoaded', () => {
 		const accountPasswordForm = document.getElementById('account-password-form');
 		const accountSettingsForm = document.getElementById('account-settings-form');
 		const accountThemeMode = document.getElementById('account-theme-mode');
+		const accountStatusBadge = document.getElementById('account-status-badge');
+		const accountStatusTitle = document.getElementById('account-status-title');
+		const accountStatusDescription = document.getElementById('account-status-description');
+		const accountStatusAction = document.getElementById('account-status-action');
+		const accountStatusSteps = document.getElementById('account-status-steps');
 		const accountSolved = document.getElementById('account-solved');
 		const accountAverageTime = document.getElementById('account-average-time');
 		const accountLastHelp = document.getElementById('account-last-help');
@@ -578,7 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		function setAccountView(viewName) {
-			const next = accountViews[viewName] ? viewName : 'profile';
+			const next = accountViews[viewName] ? viewName : 'status';
 			Object.entries(accountViews).forEach(([name, panel]) => {
 				if (panel) panel.hidden = name !== next;
 			});
@@ -588,6 +758,117 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (next === 'messages') {
 				loadAccountMessages().catch(() => {});
 				markAccountMessagesSeen(Array.isArray(latestAccountData?.messages) ? latestAccountData.messages : []);
+			}
+		}
+
+		function buildAccountStatus(data) {
+			const requests = Array.isArray(data.planRequests) ? data.planRequests : [];
+			const messages = Array.isArray(data.messages) ? data.messages : [];
+			const history = Array.isArray(data.history) ? data.history : [];
+			const pendingRequest = requests.find(request => request.status === 'pending');
+			const latestMessage = messages[messages.length - 1] || null;
+			const latestHistory = history[0] || null;
+
+			if (pendingRequest) {
+				return {
+					badge: 'Folyamatban',
+					title: 'Csomagmódosítási kérelem ellenőrzés alatt',
+					description: `A kérelmed beérkezett. Jelenlegi csomag: ${pendingRequest.currentPlan}, kért csomag: ${pendingRequest.requestedPlan}.`,
+					action: 'Csomagok megnyitása',
+					target: 'plans',
+					steps: [
+						['Kérelem elküldve', 'A csomagmódosítási igény beérkezett.', true],
+						['Admin ellenőrzés', 'Átnézzük a kérést és a kapcsolódó fiókadatokat.', true],
+						['Döntés', 'Jóváhagyás vagy egyeztetés következik.', false],
+						['Csomag frissítése', 'Jóváhagyás után az aktív csomag átáll.', false]
+					]
+				};
+			}
+
+			if (latestMessage?.senderRole === 'admin') {
+				return {
+					badge: 'Új válasz',
+					title: 'Admin válasz érkezett',
+					description: latestMessage.body || 'Új üzeneted érkezett az admin csapattól.',
+					action: 'Üzenetek megnyitása',
+					target: 'messages',
+					steps: [
+						['Üzenet érkezett', 'Az admin válaszolt a fiókodban.', true],
+						['Átnézés', 'Olvasd el a választ és jelezz vissza, ha szükséges.', false],
+						['Egyeztetés', 'A további lépések üzenetben folytathatók.', false],
+						['Lezárás', 'A megoldott munka bekerül a munkanaplóba.', false]
+					]
+				};
+			}
+
+			if (latestMessage?.senderRole === 'user') {
+				return {
+					badge: 'Válaszra vár',
+					title: 'Üzeneted elküldve',
+					description: 'Az üzeneted beérkezett, az admin válasza után itt és az üzeneteknél is látni fogod a frissítést.',
+					action: 'Üzenetek megnyitása',
+					target: 'messages',
+					steps: [
+						['Üzenet elküldve', 'A kérésed beérkezett.', true],
+						['Válasz előkészítése', 'Az admin átnézi a leírtakat.', true],
+						['Admin válasz', 'A következő válasz a fiókodban jelenik meg.', false],
+						['Megoldás', 'Szükség esetén munkanapló bejegyzés készül.', false]
+					]
+				};
+			}
+
+			if (latestHistory) {
+				return {
+					badge: latestHistory.successful ? 'Lezárva' : 'Utánkövetés',
+					title: latestHistory.topic || 'Legutóbbi munkafolyamat',
+					description: `${latestHistory.result || 'Munkanapló bejegyzés'} · ${formatAccountDate(latestHistory.completedAt || latestHistory.date, true)} · ${formatDuration(latestHistory.durationMinutes)}`,
+					action: 'Munkanapló megnyitása',
+					target: 'worklog',
+					steps: [
+						['Kapcsolatfelvétel', 'A segítségkérés rögzítve lett.', true],
+						['Hibaelhárítás', `Segített: ${latestHistory.helper || 'Across-platform'}.`, true],
+						['Eredmény', latestHistory.result || 'Az eredmény rögzítve lett.', true],
+						['Munkanapló', 'A részleteket a munkanaplóban találod.', true]
+					]
+				};
+			}
+
+			return {
+				badge: 'Nincs aktív ügy',
+				title: 'Jelenleg nincs nyitott folyamat',
+				description: 'Ha segítségre van szükséged, írj üzenetet, és itt követheted majd az állapotát.',
+				action: 'Üzenet írása',
+				target: 'messages',
+				steps: [
+					['Kérés indítása', 'Írj üzenetet vagy kérj kapcsolatfelvételt.', false],
+					['Egyeztetés', 'Átnézzük, miben tudunk segíteni.', false],
+					['Távoli segítség', 'Szükség esetén biztonságos kapcsolaton dolgozunk.', false],
+					['Munkanapló', 'A lezárt feladat bekerül az előzmények közé.', false]
+				]
+			};
+		}
+
+		function renderAccountStatus(data) {
+			const status = buildAccountStatus(data);
+			if (accountStatusBadge) accountStatusBadge.textContent = status.badge;
+			if (accountStatusTitle) accountStatusTitle.textContent = status.title;
+			if (accountStatusDescription) accountStatusDescription.textContent = status.description;
+			if (accountStatusAction) {
+				accountStatusAction.textContent = status.action;
+				accountStatusAction.onclick = () => setAccountView(status.target);
+			}
+			if (accountStatusSteps) {
+				accountStatusSteps.innerHTML = '';
+				status.steps.forEach(([title, description, done], index) => {
+					const step = document.createElement('article');
+					step.className = `account-status-step${done ? ' is-done' : ''}`;
+					step.replaceChildren(
+						textEl('span', '', String(index + 1).padStart(2, '0')),
+						textEl('strong', '', title),
+						textEl('p', 'auth-hint', description)
+					);
+					accountStatusSteps.appendChild(step);
+				});
 			}
 		}
 
@@ -703,11 +984,12 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (accountAverageTime) accountAverageTime.textContent = formatDuration(stats.averageMinutes || 0);
 			if (accountLastHelp) accountLastHelp.textContent = formatAccountDate(stats.lastHelpAt || history[0]?.date);
 			updateAccountNotifications(Array.isArray(data.messages) ? data.messages : []);
+			renderAccountStatus(data);
 			renderHistory(history);
 			renderPlans(data);
 			setAccountMode('dashboard');
 			const viewFromHash = window.location.hash === '#subscription' ? 'plans' : (window.location.hash || '').replace('#account-', '').replace('#', '');
-			setAccountView(viewFromHash || 'profile');
+			setAccountView(viewFromHash || 'status');
 		}
 
 		async function loadAccountDashboard(showSuccess) {
@@ -732,14 +1014,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			const { response, payload } = await authApiJson('/api/account/messages');
 			if (!response.ok) return;
 			const messages = Array.isArray(payload.messages) ? payload.messages : [];
+			if (latestAccountData) {
+				latestAccountData.messages = messages;
+				renderAccountStatus(latestAccountData);
+			}
 			accountMessageList.innerHTML = '';
-			if (!messages.length) accountMessageList.appendChild(textEl('p', 'auth-hint', 'Még nincs üzenetváltás.'));
+			if (!messages.length) accountMessageList.appendChild(textEl('p', 'auth-hint', 'Még nincs üzenetváltás. Írj nekünk, és itt követheted a válaszokat.'));
 			messages.forEach(message => {
 				const item = document.createElement('article');
 				item.className = `message-item ${message.senderRole === 'admin' ? 'is-admin' : 'is-user'}`;
 				item.replaceChildren(
-					textEl('strong', '', `${message.senderName || 'Across-platform'} · ${formatAccountDate(message.createdAt, true)}`),
-					textEl('p', '', message.body || '')
+					textEl('p', '', message.body || ''),
+					textEl('small', '', `${message.senderRole === 'admin' ? (message.senderName || 'Across-platform') : 'Te'} · ${formatAccountDate(message.createdAt, true)}`)
 				);
 				accountMessageList.appendChild(item);
 			});
@@ -981,6 +1267,20 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		if (accountMessageForm) {
+			const messageTextarea = accountMessageForm.elements.message;
+			if (messageTextarea) {
+				const resizeMessageTextarea = () => {
+					messageTextarea.style.height = 'auto';
+					messageTextarea.style.height = `${Math.min(messageTextarea.scrollHeight, 140)}px`;
+				};
+				messageTextarea.addEventListener('input', resizeMessageTextarea);
+				messageTextarea.addEventListener('keydown', (event) => {
+					if (event.key === 'Enter' && !event.shiftKey) {
+						event.preventDefault();
+						accountMessageForm.requestSubmit();
+					}
+				});
+			}
 			accountMessageForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAuthStatus('');
@@ -995,6 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					});
 					if (!response.ok) return setAuthStatus(payload.error || 'Az üzenet küldése nem sikerült.', 'error');
 					accountMessageForm.reset();
+					if (messageTextarea) messageTextarea.style.height = '';
 					setAuthStatus(payload.notice || 'Üzenet elküldve.', 'success');
 					await loadAccountMessages();
 				} catch (err) {
@@ -1005,12 +1306,25 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
-		if (accountNotifyBtn) {
-			accountNotifyBtn.addEventListener('click', () => {
-				setAccountView('messages');
-				markAccountMessagesSeen(Array.isArray(latestAccountData?.messages) ? latestAccountData.messages : []);
-			});
-		}
+			if (accountNotifyBtn) {
+				accountNotifyBtn.addEventListener('click', (event) => {
+					event.stopPropagation();
+					const messages = Array.isArray(latestAccountData?.messages) ? latestAccountData.messages : [];
+					const items = messages
+						.filter(message => message.senderRole === 'admin')
+						.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+						.map(message => ({
+							title: 'Admin válasz érkezett',
+							body: message.body || 'Üzenet',
+							time: formatNotificationDate(message.createdAt),
+							onClick: () => {
+								setAccountView('messages');
+								markAccountMessagesSeen(messages);
+							}
+						}));
+					showNotificationPanel(accountNotifyBtn, items);
+				});
+			}
 
 		if (accountLogoutBtn) {
 			accountLogoutBtn.addEventListener('click', async () => {
@@ -1034,40 +1348,50 @@ document.addEventListener('DOMContentLoaded', () => {
 	const adminRoot = document.getElementById('admin');
 	if (adminRoot) {
 		const adminStatus = document.getElementById('admin-status');
-		const adminLoginForm = document.getElementById('admin-login-form');
-		const adminForcePasswordForm = document.getElementById('admin-force-password-form');
-		const adminSessionUser = document.getElementById('admin-session-user');
-		const adminLogoutBtn = document.getElementById('admin-logout');
-		const adminApp = document.getElementById('admin-app');
-		const adminNavBtns = adminRoot.querySelectorAll('.admin-nav-btn');
-		const adminViews = {
-			users: document.getElementById('admin-users-view'),
-			tasks: document.getElementById('admin-tasks-view'),
-			requests: document.getElementById('admin-requests-view'),
-			messages: document.getElementById('admin-messages-view')
-		};
-		const adminUsersList = document.getElementById('admin-users');
-		const adminUserSelect = document.getElementById('admin-user-select');
+			const adminLoginForm = document.getElementById('admin-login-form');
+			const adminForcePasswordForm = document.getElementById('admin-force-password-form');
+			const adminSessionUser = document.getElementById('admin-session-user');
+			const adminLogoutBtn = document.getElementById('admin-logout');
+			const adminApp = document.getElementById('admin-app');
+			const adminNavBtns = adminRoot.querySelectorAll('.admin-nav-btn');
+			const adminViews = {
+				overview: document.getElementById('admin-overview-view'),
+				users: document.getElementById('admin-users-view'),
+				tasks: document.getElementById('admin-tasks-view'),
+				contacts: document.getElementById('admin-contacts-view'),
+				requests: document.getElementById('admin-requests-view'),
+				messages: document.getElementById('admin-messages-view')
+			};
+			const adminUsersList = document.getElementById('admin-users');
+			const adminUserSearch = document.getElementById('admin-user-search');
+			const adminUserSelect = document.getElementById('admin-user-select');
 		const adminTaskUserSelect = document.getElementById('admin-task-user');
-		const adminMessageUserSelect = document.getElementById('admin-message-user');
-		const adminPasswordForm = document.getElementById('admin-password-form');
-		const adminDisableBtn = document.getElementById('admin-disable-user');
-		const adminRestoreBtn = document.getElementById('admin-restore-user');
-		const adminGenerateTokenBtn = document.getElementById('admin-generate-token');
-		const adminDeleteBtn = document.getElementById('admin-delete-user');
-		const adminRefreshUsersBtn = document.getElementById('admin-refresh-users');
+			const adminMessageUserSelect = document.getElementById('admin-message-user');
+			const adminPasswordForm = document.getElementById('admin-password-form');
+			const adminDisableBtn = document.getElementById('admin-disable-user');
+			const adminRestoreBtn = document.getElementById('admin-restore-user');
+			const adminGenerateTokenBtn = document.getElementById('admin-generate-token');
+			const adminDeleteBtn = document.getElementById('admin-delete-user');
+			const adminRefreshAllBtn = document.getElementById('admin-refresh-all');
+			const adminRefreshUsersBtn = document.getElementById('admin-refresh-users');
 		const adminTokenOutput = document.getElementById('admin-token-output');
 		const adminSelectedSummary = document.getElementById('admin-selected-summary');
 		const adminStatUsers = document.getElementById('admin-stat-users');
 		const adminStatTasks = document.getElementById('admin-stat-tasks');
 		const adminStatSuccess = document.getElementById('admin-stat-success');
+		const adminRecentContacts = document.getElementById('admin-recent-contacts');
+		const adminRecentTasks = document.getElementById('admin-recent-tasks');
+		const adminActiveClients = document.getElementById('admin-active-clients');
+		const adminSystemState = document.getElementById('admin-system-state');
 		const adminTaskForm = document.getElementById('admin-task-form');
 		const adminTaskId = document.getElementById('admin-task-id');
 		const adminTaskFormTitle = document.getElementById('admin-task-form-title');
 		const adminTaskList = document.getElementById('admin-task-list');
 		const adminNewTaskBtn = document.getElementById('admin-new-task');
-		const adminTaskResetBtn = document.getElementById('admin-task-reset');
-		const adminRequestList = document.getElementById('admin-request-list');
+			const adminTaskResetBtn = document.getElementById('admin-task-reset');
+			const adminContactList = document.getElementById('admin-contact-list');
+			const adminRefreshContactsBtn = document.getElementById('admin-refresh-contacts');
+			const adminRequestList = document.getElementById('admin-request-list');
 		const adminRefreshRequestsBtn = document.getElementById('admin-refresh-requests');
 		const adminMessageList = document.getElementById('admin-message-list');
 		const adminConversationList = document.getElementById('admin-conversation-list');
@@ -1102,11 +1426,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			return { response, payload };
 		}
 
-		let cachedUsers = [];
-		let cachedTasks = [];
-		let cachedRequests = [];
-		let cachedMessages = [];
-		let selectedConversationUserId = '';
+			let cachedUsers = [];
+			let cachedTasks = [];
+			let cachedRequests = [];
+			let cachedMessages = [];
+			let cachedContactRequests = [];
+			let selectedAdminUserId = '';
+			let adminUserFilter = '';
+			let selectedConversationUserId = '';
 		const ADMIN_LAST_SEEN_KEY = 'across-admin-last-seen';
 
 		function setAdminMode(mode) {
@@ -1128,10 +1455,10 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (adminNotifyBadge) adminNotifyBadge.hidden = true;
 		}
 
-		function selectedUser() {
-			if (!adminUserSelect) return null;
-			return cachedUsers.find(user => user.id === adminUserSelect.value) || null;
-		}
+			function selectedUser() {
+				const selectedId = selectedAdminUserId || adminUserSelect?.value || '';
+				return cachedUsers.find(user => user.id === selectedId) || null;
+			}
 
 		function formatDate(value) {
 			if (!value) return 'ismeretlen';
@@ -1162,11 +1489,15 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (status === 'successful') return 'Sikeres';
 			if (status === 'followup') return 'Utánkövetés';
 			if (status === 'failed') return 'Sikertelen';
-			if (status === 'pending') return 'Folyamatban';
-			if (status === 'approved') return 'Jóváhagyva';
-			if (status === 'rejected') return 'Elutasítva';
-			return status === 'active' ? 'Aktív' : 'Letiltva';
-		}
+				if (status === 'pending') return 'Folyamatban';
+				if (status === 'approved') return 'Jóváhagyva';
+				if (status === 'rejected') return 'Elutasítva';
+				if (status === 'new') return 'Új';
+				if (status === 'in_progress') return 'Folyamatban';
+				if (status === 'replied') return 'Megválaszolva';
+				if (status === 'archived') return 'Archiválva';
+				return status === 'active' ? 'Aktív' : 'Letiltva';
+			}
 
 		function textEl(tagName, className, text) {
 			const el = document.createElement(tagName);
@@ -1175,14 +1506,27 @@ document.addEventListener('DOMContentLoaded', () => {
 			return el;
 		}
 
-		function setAdminView(viewName) {
-			Object.entries(adminViews).forEach(([name, panel]) => {
-				if (panel) panel.hidden = name !== viewName;
-			});
-			adminNavBtns.forEach(btn => {
-				btn.classList.toggle('is-active', btn.getAttribute('data-admin-view') === viewName);
-			});
-		}
+			function setAdminView(viewName) {
+				const nextView = adminViews[viewName] ? viewName : 'overview';
+				Object.entries(adminViews).forEach(([name, panel]) => {
+					if (panel) panel.hidden = name !== nextView;
+				});
+				adminNavBtns.forEach(btn => {
+					btn.classList.toggle('is-active', btn.getAttribute('data-admin-view') === nextView);
+				});
+			}
+
+			function openAdminView(viewName) {
+				setAdminView(viewName);
+				setAdminStatus('');
+				if (viewName === 'tasks') resetTaskForm();
+				if (viewName === 'contacts') loadAdminContactRequests().catch(err => setAdminStatus(err.message, 'error'));
+				if (viewName === 'requests') loadAdminPlanRequests().catch(err => setAdminStatus(err.message, 'error'));
+				if (viewName === 'messages') {
+					markAdminMessagesSeen();
+					loadAdminMessages().catch(err => setAdminStatus(err.message, 'error'));
+				}
+			}
 
 		function userName(userId) {
 			const user = cachedUsers.find(item => item.id === userId);
@@ -1197,10 +1541,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			try { localStorage.setItem(ADMIN_LAST_SEEN_KEY, String(value)); } catch (err) { /* ignore */ }
 		}
 
-		function updateAdminNotifications() {
-			if (!adminNotifyBtn || !adminNotifyBadge) return;
-			const unread = cachedMessages.filter(message => message.senderRole === 'user' && new Date(message.createdAt).getTime() > readAdminLastSeen()).length;
-			const showBell = !adminApp?.hidden;
+			function updateAdminNotifications() {
+				if (!adminNotifyBtn || !adminNotifyBadge) return;
+				const unreadMessages = cachedMessages.filter(message => message.senderRole === 'user' && new Date(message.createdAt).getTime() > readAdminLastSeen()).length;
+				const pendingRequests = cachedRequests.filter(request => request.status === 'pending').length;
+				const newContacts = cachedContactRequests.filter(request => request.status === 'new').length;
+				const unread = unreadMessages + pendingRequests + newContacts;
+				const showBell = !adminApp?.hidden;
 			const showBubble = showBell && unread > 0;
 			adminNotifyBtn.hidden = !showBell;
 			adminNotifyBtn.style.display = showBell ? '' : 'none';
@@ -1215,18 +1562,87 @@ document.addEventListener('DOMContentLoaded', () => {
 			updateAdminNotifications();
 		}
 
+		function sortByRecent(items, key = 'createdAt') {
+			return items.slice().sort((a, b) => new Date(b[key] || b.createdAt || 0).getTime() - new Date(a[key] || a.createdAt || 0).getTime());
+		}
+
+		function renderWidgetList(container, items, emptyText) {
+			if (!container) return;
+			container.innerHTML = '';
+			if (!items.length) {
+				container.appendChild(textEl('p', 'auth-hint admin-widget-empty', emptyText));
+				return;
+			}
+			items.forEach(item => container.appendChild(item));
+		}
+
+		function widgetItem(title, meta, badgeText, badgeClass = '') {
+			const item = document.createElement('article');
+			item.className = 'admin-widget-item';
+			const top = document.createElement('div');
+			top.className = 'admin-widget-item-top';
+			top.replaceChildren(
+				textEl('strong', '', title),
+				badgeText ? textEl('span', `admin-badge ${badgeClass}`, badgeText) : document.createTextNode('')
+			);
+			item.replaceChildren(top, textEl('small', '', meta));
+			return item;
+		}
+
+		function renderAdminOverviewWidgets() {
+			const contactItems = sortByRecent(cachedContactRequests).slice(0, 3).map(request => {
+				const statusClass = request.status === 'new' ? 'is-warning' : request.status === 'in_progress' ? 'is-active' : 'is-disabled';
+				return widgetItem(
+					request.name || 'Névtelen megkeresés',
+					`${request.email || 'nincs email'} · ${formatDate(request.createdAt)}`,
+					statusLabel(request.status),
+					statusClass
+				);
+			});
+			renderWidgetList(adminRecentContacts, contactItems, 'Még nincs friss megkeresés.');
+
+			const taskItems = sortByRecent(cachedTasks, 'completedAt').slice(0, 3).map(task => widgetItem(
+				task.topic || 'Feladat',
+				`${userName(task.userId)} · ${task.durationMinutes || 0} perc · ${formatDate(task.completedAt)}`,
+				statusLabel(task.status),
+				task.status === 'successful' ? 'is-active' : 'is-disabled'
+			));
+			renderWidgetList(adminRecentTasks, taskItems, 'Még nincs rögzített munka.');
+
+			const activeItems = cachedUsers
+				.filter(user => user.role !== 'admin' && user.status === 'active')
+				.slice(0, 4)
+				.map(user => {
+					const taskCount = cachedTasks.filter(task => task.userId === user.id).length;
+					return widgetItem(user.name, `${user.email} · ${taskCount} munka`, 'Aktív', 'is-active');
+				});
+			renderWidgetList(adminActiveClients, activeItems, 'Még nincs aktív ügyfélfiók.');
+
+			const pendingRequests = cachedRequests.filter(request => request.status === 'pending').length;
+			const newContacts = cachedContactRequests.filter(request => request.status === 'new').length;
+			const userMessages = cachedMessages.filter(message => message.senderRole === 'user').length;
+			const systemItems = [
+				widgetItem('API kapcsolat', 'Szerveroldali admin végpontok elérhetők', 'Online', 'is-active'),
+				widgetItem('Megkeresések', `${newContacts} új kapcsolatfelvétel`, newContacts ? 'Figyelmet kér' : 'Rendben', newContacts ? 'is-warning' : 'is-active'),
+				widgetItem('Csomagkérelmek', `${pendingRequests} függőben lévő kérés`, pendingRequests ? 'Teendő' : 'Rendben', pendingRequests ? 'is-warning' : 'is-active'),
+				widgetItem('Üzenetközpont', `${userMessages} ügyfélüzenet összesen`, 'Aktív', 'is-active')
+			];
+			renderWidgetList(adminSystemState, systemItems, 'A rendszer állapota még nem elérhető.');
+		}
+
 		function updateAdminStats() {
 			if (adminStatUsers) adminStatUsers.textContent = String(cachedUsers.length);
 			if (adminStatTasks) adminStatTasks.textContent = String(cachedTasks.length);
 			if (adminStatSuccess) {
 				adminStatSuccess.textContent = String(cachedTasks.filter(task => task.status === 'successful').length);
 			}
+			renderAdminOverviewWidgets();
 		}
 
-		function updateSelectedSummary() {
-			if (!adminSelectedSummary) return;
-			const user = selectedUser();
-			if (!user) {
+			function updateSelectedSummary() {
+				if (!adminSelectedSummary) return;
+				const user = selectedUser();
+				if (!user) {
 				adminSelectedSummary.textContent = 'Nincs kiválasztott felhasználó.';
 				updateUserActionState(null);
 				return;
@@ -1238,8 +1654,77 @@ document.addEventListener('DOMContentLoaded', () => {
 				textEl('span', '', user.email),
 				textEl('span', '', `${roleLabel(user.role)} · ${statusLabel(user.status)} · létrehozva: ${formatDate(user.createdAt)} · feladatok: ${taskCount}`)
 			);
-			updateUserActionState(user);
-		}
+				updateUserActionState(user);
+			}
+
+			function selectAdminUser(user) {
+				selectedAdminUserId = user?.id || '';
+				if (adminUserSelect && selectedAdminUserId) adminUserSelect.value = selectedAdminUserId;
+				if (adminTokenOutput) adminTokenOutput.textContent = '';
+				updateSelectedSummary();
+				renderUsers(cachedUsers);
+			}
+
+			async function changeUserPassword(user) {
+				if (!user) return setAdminStatus('Válassz ki felhasználót.', 'error');
+				const newPassword = window.prompt(`Ideiglenes új jelszó ehhez a fiókhoz:\n${user.name} (${user.email})`);
+				if (newPassword === null) return;
+				if (!strongPasswordPattern.test(newPassword)) {
+					setAdminStatus('Az új jelszó nem elég erős.', 'error');
+					return;
+				}
+				const { response, payload } = await apiJson(`/api/admin/users/${encodeURIComponent(user.id)}/password`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ newPassword })
+				});
+				if (!response.ok) return setAdminStatus(payload.error || 'Jelszó módosítás sikertelen.', 'error');
+				setAdminStatus(payload.message || 'Jelszó frissítve.', 'success');
+				await loadAdminUsers();
+			}
+
+			async function disableUser(user) {
+				if (!user) return setAdminStatus('Válassz ki felhasználót.', 'error');
+				if (user.role === 'admin') return setAdminStatus('Admin fiók nem tiltható le ezen a felületen.', 'error');
+				const { response, payload } = await apiJson(`/api/admin/users/${encodeURIComponent(user.id)}/disable`, { method: 'POST' });
+				if (!response.ok) return setAdminStatus(payload.error || 'A letiltás nem sikerült.', 'error');
+				setAdminStatus(payload.message || 'Fiók letiltva.', 'success');
+				await loadAdminUsers();
+			}
+
+			async function restoreUser(user) {
+				if (!user) return setAdminStatus('Válassz ki felhasználót.', 'error');
+				const { response, payload } = await apiJson(`/api/admin/users/${encodeURIComponent(user.id)}/restore`, { method: 'POST' });
+				if (!response.ok) return setAdminStatus(payload.error || 'A visszaállítás nem sikerült.', 'error');
+				setAdminStatus(payload.message || 'Fiók visszaállítva.', 'success');
+				await loadAdminUsers();
+			}
+
+			async function generateUserResetToken(user) {
+				if (adminTokenOutput) adminTokenOutput.textContent = '';
+				if (!user) return setAdminStatus('Válassz ki felhasználót.', 'error');
+				const { response, payload } = await apiJson(`/api/admin/users/${encodeURIComponent(user.id)}/reset-token`, { method: 'POST' });
+				if (!response.ok) return setAdminStatus(payload.error || 'A token generálás nem sikerült.', 'error');
+				setAdminStatus(payload.message || 'Reset token generálva.', 'success');
+				if (payload.resetToken && adminTokenOutput) {
+					adminTokenOutput.textContent = `Fejlesztői token (${user.email}): ${payload.resetToken}`;
+				}
+			}
+
+			async function deleteUser(user) {
+				if (adminTokenOutput) adminTokenOutput.textContent = '';
+				if (!user) return setAdminStatus('Válassz ki felhasználót.', 'error');
+				if (user.role === 'admin') return setAdminStatus('Admin fiók nem törölhető ezen a felületen.', 'error');
+				const taskCount = cachedTasks.filter(task => task.userId === user.id).length;
+				const confirmed = window.confirm(`Biztosan törlöd ezt a fiókot?\n\n${user.name} (${user.email})\nKapcsolódó előzmények: ${taskCount} db\n\nA művelet nem vonható vissza.`);
+				if (!confirmed) return;
+				const { response, payload } = await apiJson(`/api/admin/users/${encodeURIComponent(user.id)}`, { method: 'DELETE' });
+				if (!response.ok) return setAdminStatus(payload.error || 'A fiók törlése nem sikerült.', 'error');
+				setAdminStatus(payload.message || 'Fiók törölve.', 'success');
+				selectedAdminUserId = '';
+				await refreshAdminData();
+				resetTaskForm();
+			}
 
 		function updateUserActionState(user) {
 			const isAdminUser = user?.role === 'admin';
@@ -1270,45 +1755,85 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 
-		function renderUsers(users) {
-			cachedUsers = Array.isArray(users) ? users : [];
-			renderUserOptions(adminUserSelect, true);
-			renderUserOptions(adminTaskUserSelect, false);
-			renderUserOptions(adminMessageUserSelect, false);
-			updateSelectedSummary();
+			function renderUsers(users) {
+				cachedUsers = Array.isArray(users) ? users : [];
+				renderUserOptions(adminUserSelect, true);
+				renderUserOptions(adminTaskUserSelect, false);
+				renderUserOptions(adminMessageUserSelect, false);
+				updateSelectedSummary();
 
-			if (adminUsersList) {
-				adminUsersList.innerHTML = '';
-				cachedUsers.forEach(user => {
-					const li = document.createElement('li');
-					const statusClass = user.status === 'active' ? 'is-active' : 'is-disabled';
-					const identity = document.createElement('div');
-					identity.replaceChildren(
-						textEl('strong', '', user.name),
-						textEl('span', '', user.email)
-					);
+				if (adminUsersList) {
+					adminUsersList.innerHTML = '';
+					const query = adminUserFilter.trim().toLowerCase();
+					const visibleUsers = cachedUsers.filter(user => {
+						const haystack = [
+							user.name,
+							user.email,
+							roleLabel(user.role),
+							statusLabel(user.status),
+							String(cachedTasks.filter(task => task.userId === user.id).length)
+						].join(' ').toLowerCase();
+						return !query || haystack.includes(query);
+					});
+					if (!visibleUsers.length) {
+						const empty = document.createElement('li');
+						empty.className = 'admin-user-row';
+						empty.appendChild(textEl('span', 'auth-hint', 'Nincs találat erre a keresésre.'));
+						adminUsersList.appendChild(empty);
+						updateAdminStats();
+						return;
+					}
+					visibleUsers.forEach(user => {
+						const li = document.createElement('li');
+						li.className = `admin-user-row${user.id === selectedAdminUserId ? ' is-selected' : ''}`;
+						const statusClass = user.status === 'active' ? 'is-active' : 'is-disabled';
+						const identity = document.createElement('div');
+						identity.className = 'admin-user-identity';
+						identity.replaceChildren(
+							textEl('strong', '', user.name),
+							textEl('span', '', user.email)
+						);
 
 					const meta = document.createElement('div');
 					meta.className = 'admin-user-meta';
 					meta.replaceChildren(
 						textEl('span', 'admin-badge', roleLabel(user.role)),
-						textEl('span', `admin-badge ${statusClass}`, statusLabel(user.status)),
-						textEl('span', 'admin-badge', `${cachedTasks.filter(task => task.userId === user.id).length} feladat`)
-					);
+							textEl('span', `admin-badge ${statusClass}`, statusLabel(user.status)),
+							textEl('span', 'admin-badge', `${cachedTasks.filter(task => task.userId === user.id).length} feladat`)
+						);
 
-					li.replaceChildren(identity, meta);
-					adminUsersList.appendChild(li);
-				});
+						const actions = document.createElement('div');
+						actions.className = 'admin-user-actions';
+						const passwordBtn = textEl('button', 'btn secondary compact', 'Jelszó');
+						const disableBtn = textEl('button', 'btn secondary compact', 'Letiltás');
+						const restoreBtn = textEl('button', 'btn secondary compact', 'Visszaállítás');
+						const tokenBtn = textEl('button', 'btn secondary compact', 'Reset token');
+						const deleteBtn = textEl('button', 'btn secondary danger compact', 'Törlés');
+						[passwordBtn, disableBtn, restoreBtn, tokenBtn, deleteBtn].forEach(btn => { btn.type = 'button'; });
+						disableBtn.disabled = user.role === 'admin' || user.status !== 'active';
+						restoreBtn.disabled = user.status === 'active';
+						deleteBtn.disabled = user.role === 'admin';
+						passwordBtn.addEventListener('click', () => { selectAdminUser(user); changeUserPassword(user).catch(err => setAdminStatus(err.message, 'error')); });
+						disableBtn.addEventListener('click', () => { selectAdminUser(user); disableUser(user).catch(err => setAdminStatus(err.message, 'error')); });
+						restoreBtn.addEventListener('click', () => { selectAdminUser(user); restoreUser(user).catch(err => setAdminStatus(err.message, 'error')); });
+						tokenBtn.addEventListener('click', () => { selectAdminUser(user); generateUserResetToken(user).catch(err => setAdminStatus(err.message, 'error')); });
+						deleteBtn.addEventListener('click', () => { selectAdminUser(user); deleteUser(user).catch(err => setAdminStatus(err.message, 'error')); });
+						actions.replaceChildren(passwordBtn, disableBtn, restoreBtn, tokenBtn, deleteBtn);
+
+						li.replaceChildren(identity, meta, actions);
+						adminUsersList.appendChild(li);
+					});
+				}
+				updateAdminStats();
 			}
-			updateAdminStats();
-		}
 
-		function renderPlanRequests(requests) {
-			cachedRequests = Array.isArray(requests) ? requests : [];
-			if (!adminRequestList) return;
+			function renderPlanRequests(requests) {
+				cachedRequests = Array.isArray(requests) ? requests : [];
+				if (!adminRequestList) return;
 			adminRequestList.innerHTML = '';
 			if (!cachedRequests.length) {
 				adminRequestList.appendChild(textEl('p', 'auth-hint', 'Még nincs csomagmódosítási kérelem.'));
+				updateAdminStats();
 				return;
 			}
 			cachedRequests.forEach(request => {
@@ -1340,6 +1865,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				item.replaceChildren(header, meta, textEl('p', 'auth-hint', request.note || request.adminNote || ''), actions);
 				adminRequestList.appendChild(item);
 			});
+			updateAdminStats();
 		}
 
 		function renderAdminMessages(messages) {
@@ -1354,59 +1880,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			if (!adminConversationList) return;
 			adminConversationList.innerHTML = '';
-			if (!users.length) {
-				adminConversationList.appendChild(textEl('p', 'auth-hint', 'Még nincs üzenetváltás.'));
-				if (adminMessageList) adminMessageList.innerHTML = '';
-				if (adminChatUser) adminChatUser.textContent = 'Válassz ügyfelet';
-				if (adminChatSubtitle) adminChatSubtitle.textContent = 'A válaszok itt jelennek meg.';
-				updateAdminNotifications();
-				return;
-			}
+				if (!users.length) {
+					adminConversationList.appendChild(textEl('p', 'auth-hint', 'Még nincs üzenetváltás.'));
+					if (adminMessageList) adminMessageList.innerHTML = '';
+					if (adminChatUser) adminChatUser.textContent = 'Nincs beszélgetés';
+					if (adminChatSubtitle) adminChatSubtitle.textContent = 'Az új ügyfélüzenetek itt jelennek majd meg.';
+					if (adminMessageForm) {
+						adminMessageForm.elements.message.disabled = true;
+						adminMessageForm.querySelector('button[type="submit"]').disabled = true;
+					}
+					updateAdminNotifications();
+					updateAdminStats();
+					return;
+				}
 
 			if (!selectedConversationUserId || !grouped.has(selectedConversationUserId)) {
 				selectedConversationUserId = users[0][0];
 			}
 
-			users.forEach(([userId, items]) => {
-				const latest = items.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-				const unread = items.filter(message => message.senderRole === 'user' && new Date(message.createdAt).getTime() > readAdminLastSeen()).length;
-				const article = document.createElement('button');
-				article.type = 'button';
-				article.className = `admin-conversation-item ${userId === selectedConversationUserId ? 'is-active' : ''}`;
-				article.innerHTML = `
-					<div class="admin-conversation-meta">
-					  <strong>${userName(userId)}</strong>
-					  ${unread ? '<span class="admin-conversation-badge">' + unread + '</span>' : ''}
-					</div>
-					<span class="auth-hint">${(latest && latest.body) ? latest.body.slice(0, 72) : 'Nincs előző üzenet'}</span>
-				`;
-				article.addEventListener('click', () => {
-					selectedConversationUserId = userId;
-					renderAdminMessages(cachedMessages);
-					markAdminMessagesSeen();
+				users.forEach(([userId, items]) => {
+					const latest = items.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+					const unread = items.filter(message => message.senderRole === 'user' && new Date(message.createdAt).getTime() > readAdminLastSeen()).length;
+					const article = document.createElement('button');
+					article.type = 'button';
+					article.className = `admin-conversation-item ${userId === selectedConversationUserId ? 'is-active' : ''}`;
+					const selectedUser = cachedUsers.find(user => user.id === userId) || null;
+					const initials = (selectedUser?.name || 'AP').split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+					const avatar = textEl('span', 'chat-avatar small', initials || 'AP');
+					const body = document.createElement('div');
+					body.className = 'conversation-body';
+					const row = document.createElement('div');
+					row.className = 'admin-conversation-meta';
+					row.replaceChildren(
+						textEl('strong', '', selectedUser ? selectedUser.name : userName(userId)),
+						textEl('small', '', formatNotificationDate(latest?.createdAt))
+					);
+					const preview = textEl('span', 'auth-hint', (latest && latest.body) ? latest.body.slice(0, 92) : 'Nincs előző üzenet');
+					body.replaceChildren(row, preview);
+					const badge = unread ? textEl('span', 'admin-conversation-badge', String(unread)) : document.createTextNode('');
+					article.replaceChildren(avatar, body, badge);
+					article.addEventListener('click', () => {
+						selectedConversationUserId = userId;
+						renderAdminMessages(cachedMessages);
+						markAdminMessagesSeen();
 				});
 				adminConversationList.appendChild(article);
 			});
 
 			const selectedItems = grouped.get(selectedConversationUserId) || users[0][1];
-			if (adminMessageList) {
-				adminMessageList.innerHTML = '';
-				const selectedUser = cachedUsers.find(user => user.id === selectedConversationUserId) || null;
-				if (adminChatUser) adminChatUser.textContent = selectedUser ? `${selectedUser.name} (${selectedUser.email})` : 'Válassz ügyfelet';
-				if (adminChatSubtitle) adminChatSubtitle.textContent = selectedUser ? 'A legfrissebb válaszok közvetlenül a beszélgetésben láthatók.' : 'A válaszok itt jelennek meg.';
-				if (adminMessageUserSelect) adminMessageUserSelect.value = selectedConversationUserId;
-				selectedItems.slice().sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).forEach(message => {
-					const item = document.createElement('article');
-					item.className = `message-item ${message.senderRole === 'admin' ? 'is-admin' : 'is-user'}`;
-					item.replaceChildren(
-						textEl('strong', '', `${message.senderRole === 'admin' ? 'Admin' : userName(message.userId)} · ${formatDate(message.createdAt)}`),
-						textEl('p', '', message.body || '')
-					);
-					adminMessageList.appendChild(item);
-				});
+				if (adminMessageList) {
+					adminMessageList.innerHTML = '';
+					const selectedUser = cachedUsers.find(user => user.id === selectedConversationUserId) || null;
+					if (adminChatUser) adminChatUser.textContent = selectedUser ? selectedUser.name : 'Válassz beszélgetést';
+					if (adminChatSubtitle) adminChatSubtitle.textContent = selectedUser ? selectedUser.email : 'Az üzenetek itt jelennek meg.';
+					if (adminMessageUserSelect) adminMessageUserSelect.value = selectedConversationUserId;
+					if (adminMessageForm) {
+						adminMessageForm.elements.message.disabled = !selectedConversationUserId;
+						adminMessageForm.querySelector('button[type="submit"]').disabled = !selectedConversationUserId;
+					}
+					selectedItems.slice().sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).forEach(message => {
+						const item = document.createElement('article');
+						item.className = `message-item ${message.senderRole === 'admin' ? 'is-admin' : 'is-user'}`;
+						item.replaceChildren(
+							textEl('p', '', message.body || ''),
+							textEl('small', '', formatNotificationDate(message.createdAt))
+						);
+						adminMessageList.appendChild(item);
+					});
 				adminMessageList.scrollTop = adminMessageList.scrollHeight;
 			}
 			updateAdminNotifications();
+			updateAdminStats();
 		}
 
 		function renderTasks(tasks) {
@@ -1470,11 +2014,17 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderTasks(payload.tasks || []);
 		}
 
-		async function loadAdminPlanRequests() {
-			const { response, payload } = await apiJson('/api/admin/plan-requests');
-			if (!response.ok) throw new Error(payload.error || 'A csomagkérelmek nem tölthetők be.');
-			renderPlanRequests(payload.requests || []);
-		}
+			async function loadAdminPlanRequests() {
+				const { response, payload } = await apiJson('/api/admin/plan-requests');
+				if (!response.ok) throw new Error(payload.error || 'A csomagkérelmek nem tölthetők be.');
+				renderPlanRequests(payload.requests || []);
+			}
+
+			async function loadAdminContactRequests() {
+				const { response, payload } = await apiJson('/api/admin/contact-requests');
+				if (!response.ok) throw new Error(payload.error || 'A megkeresések nem tölthetők be.');
+				renderContactRequests(payload.requests || []);
+			}
 
 		async function loadAdminMessages() {
 			const { response, payload } = await apiJson('/api/admin/messages');
@@ -1484,18 +2034,20 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 
 		async function refreshAdminData() {
-			await loadAdminUsers();
-			await loadAdminTasks();
-			await loadAdminPlanRequests();
-			await loadAdminMessages();
-			renderUsers(cachedUsers);
-		}
+				await loadAdminUsers();
+				await loadAdminTasks();
+				await loadAdminContactRequests();
+				await loadAdminPlanRequests();
+				await loadAdminMessages();
+				renderUsers(cachedUsers);
+			}
 
-		function openAdminMessages() {
-			setAdminView('messages');
-			markAdminMessagesSeen();
-			loadAdminMessages().catch(err => setAdminStatus(err.message, 'error'));
-		}
+			function openAdminMessages(userId) {
+				if (userId) selectedConversationUserId = userId;
+				setAdminView('messages');
+				markAdminMessagesSeen();
+				loadAdminMessages().catch(err => setAdminStatus(err.message, 'error'));
+			}
 
 		function resetTaskForm() {
 			if (!adminTaskForm) return;
@@ -1551,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderUsers(cachedUsers);
 		}
 
-		async function updatePlanRequest(requestId, status) {
+			async function updatePlanRequest(requestId, status) {
 			const adminNote = window.prompt(status === 'approved' ? 'Megjegyzés a jóváhagyáshoz (opcionális):' : 'Elutasítás oka (opcionális):') || '';
 			const { response, payload } = await apiJson(`/api/admin/plan-requests/${encodeURIComponent(requestId)}`, {
 				method: 'PATCH',
@@ -1563,9 +2115,25 @@ document.addEventListener('DOMContentLoaded', () => {
 				return;
 			}
 			setAdminStatus(payload.message || 'Kérelem frissítve.', 'success');
-			await refreshAdminData();
-			setAdminView('requests');
-		}
+				await refreshAdminData();
+				setAdminView('requests');
+			}
+
+			async function updateContactRequest(requestId, status) {
+				const adminNote = window.prompt('Admin megjegyzés (opcionális):') || '';
+				const { response, payload } = await apiJson(`/api/admin/contact-requests/${encodeURIComponent(requestId)}`, {
+					method: 'PATCH',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ status, adminNote })
+				});
+				if (!response.ok) {
+					setAdminStatus(payload.error || 'A megkeresés frissítése nem sikerült.', 'error');
+					return;
+				}
+				setAdminStatus(payload.message || 'Megkeresés frissítve.', 'success');
+				await refreshAdminData();
+				setAdminView('contacts');
+			}
 
 		async function bootstrapAdmin() {
 			setAdminStatus('Jogosultság ellenőrzése...');
@@ -1581,22 +2149,23 @@ document.addEventListener('DOMContentLoaded', () => {
 			if (user.mustChangePassword) {
 				setAdminMode('must-change');
 				setAdminStatus('Első belépésnél kötelező a jelszócsere.', 'error');
-				if (adminSessionUser) adminSessionUser.textContent = `Bejelentkezve: ${user.name} (${user.email})`;
-				return;
-			}
-			if (user.role !== 'admin') {
-				setAdminMode('unauth');
-				setAdminStatus('Ehhez az oldalhoz admin jogosultság kell.', 'error');
-				if (adminSessionUser) adminSessionUser.textContent = `Bejelentkezve: ${user.name} (${user.email})`;
-				return;
-			}
+					if (adminSessionUser) adminSessionUser.textContent = `Bejelentkezve: ${user.name} (${user.email})`;
+					return;
+				}
+				if (user.role !== 'admin') {
+					setAdminMode('unauth');
+					setAdminStatus('Ehhez az oldalhoz admin jogosultság kell.', 'error');
+					if (adminSessionUser) adminSessionUser.textContent = `Bejelentkezve: ${user.name} (${user.email})`;
+					return;
+				}
 
-			setAdminMode('ready');
-			setAdminView('users');
-			if (adminSessionUser) adminSessionUser.textContent = `Bejelentkezve: ${user.name} (${user.email})`;
-			await refreshAdminData();
-			resetTaskForm();
-			setAdminStatus('Admin felület betöltve.', 'success');
+				setAdminMode('ready');
+				const initialAdminView = window.location.hash === '#messages' ? 'messages' : window.location.hash === '#requests' ? 'requests' : window.location.hash === '#contacts' ? 'contacts' : 'overview';
+				setAdminView(initialAdminView);
+				if (adminSessionUser) adminSessionUser.textContent = `Bejelentkezve: ${user.name} (${user.email})`;
+				await refreshAdminData();
+				resetTaskForm();
+				setAdminStatus('Admin felület betöltve.', 'success');
 		}
 
 		if (adminLoginForm) {
@@ -1674,22 +2243,98 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
-		adminNavBtns.forEach(btn => {
-			btn.addEventListener('click', () => {
-				const viewName = btn.getAttribute('data-admin-view') || 'users';
-				setAdminView(viewName);
-				setAdminStatus('');
-				if (viewName === 'requests') loadAdminPlanRequests().catch(err => setAdminStatus(err.message, 'error'));
-				if (viewName === 'messages') {
-					markAdminMessagesSeen();
-					loadAdminMessages().catch(err => setAdminStatus(err.message, 'error'));
-				}
+			adminNavBtns.forEach(btn => {
+				btn.addEventListener('click', () => {
+					openAdminView(btn.getAttribute('data-admin-view') || 'overview');
+				});
 			});
-		});
 
-		if (adminNotifyBtn) {
-			adminNotifyBtn.addEventListener('click', () => openAdminMessages());
-		}
+			adminRoot.querySelectorAll('[data-admin-shortcut]').forEach(btn => {
+				btn.addEventListener('click', () => {
+					openAdminView(btn.getAttribute('data-admin-shortcut') || 'overview');
+				});
+			});
+
+			if (adminNotifyBtn) {
+				adminNotifyBtn.addEventListener('click', (event) => {
+					event.stopPropagation();
+					const messageItems = cachedMessages
+						.filter(message => message.senderRole === 'user')
+						.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+						.map(message => ({
+							title: userName(message.userId),
+							body: message.body || 'Üzenet',
+							time: formatNotificationDate(message.createdAt),
+							timestamp: new Date(message.createdAt).getTime(),
+							onClick: () => openAdminMessages(message.userId)
+						}));
+					const requestItems = cachedRequests
+						.filter(request => request.status === 'pending')
+						.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+						.map(request => ({
+							title: 'Új csomagmódosítási kérelem',
+							body: `${request.userName || 'Ügyfél'}: ${request.currentPlanName || request.currentPlan} -> ${request.requestedPlanName || request.requestedPlan}`,
+							time: formatNotificationDate(request.createdAt),
+							timestamp: new Date(request.createdAt).getTime(),
+							onClick: () => openAdminView('requests')
+						}));
+					const contactItems = cachedContactRequests
+						.filter(request => request.status === 'new')
+						.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+						.map(request => ({
+							title: 'Új kapcsolatfelvétel',
+							body: `${request.name}: ${request.message || 'Megkeresés'}`,
+							time: formatNotificationDate(request.createdAt),
+							timestamp: new Date(request.createdAt).getTime(),
+							onClick: () => openAdminView('contacts')
+						}));
+					const items = [...contactItems, ...requestItems, ...messageItems].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+					showNotificationPanel(adminNotifyBtn, items);
+				});
+			}
+
+			function renderContactRequests(requests) {
+				cachedContactRequests = Array.isArray(requests) ? requests : [];
+				if (!adminContactList) return;
+				adminContactList.innerHTML = '';
+				if (!cachedContactRequests.length) {
+					adminContactList.appendChild(textEl('p', 'auth-hint', 'Még nincs kapcsolatfelvételi megkeresés.'));
+					updateAdminStats();
+					return;
+				}
+				cachedContactRequests.forEach(request => {
+					const item = document.createElement('article');
+					item.className = 'admin-task-item';
+					const header = document.createElement('div');
+					header.className = 'admin-task-item-header';
+					header.replaceChildren(
+						textEl('strong', '', `${request.name} (${request.email})`),
+						textEl('span', `admin-badge ${request.status === 'new' ? 'is-warning' : request.status === 'replied' ? 'is-active' : 'is-disabled'}`, statusLabel(request.status))
+					);
+					const meta = document.createElement('div');
+					meta.className = 'history-meta';
+					meta.replaceChildren(
+						textEl('span', '', formatDate(request.createdAt)),
+						textEl('span', '', request.adminNote ? `Megjegyzés: ${request.adminNote}` : 'Nincs admin megjegyzés')
+					);
+					const actions = document.createElement('div');
+					actions.className = 'admin-task-actions';
+					const progressBtn = textEl('button', 'btn secondary', 'Folyamatban');
+					const repliedBtn = textEl('button', 'btn secondary', 'Megválaszolva');
+					const archiveBtn = textEl('button', 'btn secondary danger', 'Archiválás');
+					[progressBtn, repliedBtn, archiveBtn].forEach(btn => { btn.type = 'button'; });
+					progressBtn.disabled = request.status === 'in_progress';
+					repliedBtn.disabled = request.status === 'replied';
+					archiveBtn.disabled = request.status === 'archived';
+					progressBtn.addEventListener('click', () => updateContactRequest(request.id, 'in_progress'));
+					repliedBtn.addEventListener('click', () => updateContactRequest(request.id, 'replied'));
+					archiveBtn.addEventListener('click', () => updateContactRequest(request.id, 'archived'));
+					actions.replaceChildren(progressBtn, repliedBtn, archiveBtn);
+					item.replaceChildren(header, meta, textEl('p', 'auth-hint', request.message || ''), actions);
+					adminContactList.appendChild(item);
+				});
+				updateAdminStats();
+			}
 
 		if (adminNewTaskBtn) {
 			adminNewTaskBtn.addEventListener('click', () => {
@@ -1705,7 +2350,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
-		if (adminTaskForm) {
+			if (adminTaskForm) {
 			adminTaskForm.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				setAdminStatus('');
@@ -1753,10 +2398,21 @@ document.addEventListener('DOMContentLoaded', () => {
 				} finally {
 					setSubmitDisabled(adminTaskForm, false);
 				}
-			});
-		}
+				});
+			}
 
-		if (adminRefreshUsersBtn) {
+			if (adminRefreshAllBtn) {
+				adminRefreshAllBtn.addEventListener('click', async () => {
+					try {
+						await refreshAdminData();
+						setAdminStatus('Admin adatok frissítve.', 'success');
+					} catch (err) {
+						setAdminStatus(err.message, 'error');
+					}
+				});
+			}
+
+			if (adminRefreshUsersBtn) {
 			adminRefreshUsersBtn.addEventListener('click', async () => {
 				try {
 					await refreshAdminData();
@@ -1767,34 +2423,53 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
-		if (adminRefreshRequestsBtn) {
-			adminRefreshRequestsBtn.addEventListener('click', async () => {
-				try {
-					await loadAdminPlanRequests();
-					setAdminStatus('Csomagkérelmek frissítve.', 'success');
+			if (adminRefreshRequestsBtn) {
+				adminRefreshRequestsBtn.addEventListener('click', async () => {
+					try {
+						await loadAdminPlanRequests();
+						setAdminStatus('Csomagkérelmek frissítve.', 'success');
 				} catch (err) {
 					setAdminStatus(err.message, 'error');
 				}
-			});
-		}
+				});
+			}
 
-		if (adminRefreshMessagesBtn) {
-			adminRefreshMessagesBtn.addEventListener('click', async () => {
-				try {
-					await loadAdminMessages();
-					setAdminStatus('Üzenetek frissítve.', 'success');
+			if (adminRefreshContactsBtn) {
+				adminRefreshContactsBtn.addEventListener('click', async () => {
+					try {
+						await loadAdminContactRequests();
+						setAdminStatus('Megkeresések frissítve.', 'success');
+					} catch (err) {
+						setAdminStatus(err.message, 'error');
+					}
+				});
+			}
+
+			if (adminRefreshMessagesBtn) {
+				adminRefreshMessagesBtn.addEventListener('click', async () => {
+					try {
+						await loadAdminMessages();
+						setAdminStatus('Üzenetek frissítve.', 'success');
 				} catch (err) {
 					setAdminStatus(err.message, 'error');
 				}
-			});
-		}
+				});
+			}
 
-		if (adminUserSelect) {
-			adminUserSelect.addEventListener('change', () => {
-				if (adminTokenOutput) adminTokenOutput.textContent = '';
-				updateSelectedSummary();
-			});
-		}
+			if (adminUserSearch) {
+				adminUserSearch.addEventListener('input', () => {
+					adminUserFilter = adminUserSearch.value || '';
+					renderUsers(cachedUsers);
+				});
+			}
+
+			if (adminUserSelect) {
+				adminUserSelect.addEventListener('change', () => {
+					if (adminTokenOutput) adminTokenOutput.textContent = '';
+					selectedAdminUserId = adminUserSelect.value || '';
+					updateSelectedSummary();
+				});
+			}
 
 		if (adminPasswordForm) {
 			adminPasswordForm.addEventListener('submit', async (e) => {
@@ -1888,10 +2563,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 		}
 
-		if (adminMessageForm) {
-			adminMessageForm.addEventListener('submit', async (e) => {
-				e.preventDefault();
-				setAdminStatus('');
+			if (adminMessageForm) {
+				const messageTextarea = adminMessageForm.elements.message;
+				if (messageTextarea) {
+					const resizeMessageTextarea = () => {
+						messageTextarea.style.height = 'auto';
+						messageTextarea.style.height = `${Math.min(messageTextarea.scrollHeight, 130)}px`;
+					};
+					messageTextarea.addEventListener('input', resizeMessageTextarea);
+					messageTextarea.addEventListener('keydown', (event) => {
+						if (event.key === 'Enter' && !event.shiftKey) {
+							event.preventDefault();
+							adminMessageForm.requestSubmit();
+						}
+					});
+				}
+				adminMessageForm.addEventListener('submit', async (e) => {
+					e.preventDefault();
+					setAdminStatus('');
 				const userId = adminMessageForm.elements.userId.value;
 				const message = adminMessageForm.elements.message.value.trim();
 				if (!userId) return setAdminStatus('Válassz ügyfelet.', 'error');
@@ -1907,8 +2596,9 @@ document.addEventListener('DOMContentLoaded', () => {
 						setAdminStatus(payload.error || 'Az üzenet küldése nem sikerült.', 'error');
 						return;
 					}
-					adminMessageForm.reset();
-					renderUserOptions(adminMessageUserSelect, false);
+						adminMessageForm.reset();
+						if (messageTextarea) messageTextarea.style.height = '';
+						renderUserOptions(adminMessageUserSelect, false);
 					setAdminStatus(payload.notice || 'Válasz elküldve.', 'success');
 					await loadAdminMessages();
 					selectedConversationUserId = userId;

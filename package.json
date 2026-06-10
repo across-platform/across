@@ -6,10 +6,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js"
+    "dev": "NODE_ENV=development node server.js",
+    "build": "node --check server.js && node --check js/main.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=24 <25"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

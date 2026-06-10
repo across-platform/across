@@ -10,6 +10,17 @@
       "adminNote": "teszt",
       "createdAt": "2026-06-10T07:12:00.948Z",
       "updatedAt": "2026-06-10T07:12:26.786Z"
+    },
+    {
+      "id": "5d005218-4566-41f4-822a-9e8102314f8a",
+      "userId": "49cd9644-d6d5-4934-abf6-863234575b99",
+      "currentPlan": "pro",
+      "requestedPlan": "business",
+      "status": "pending",
+      "note": "",
+      "adminNote": "",
+      "createdAt": "2026-06-10T20:59:34.348Z",
+      "updatedAt": "2026-06-10T20:59:34.348Z"
     }
   ]
 }

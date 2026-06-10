@@ -19,6 +19,7 @@ const USERS_DB_PATH = path.join(DATA_DIR, 'users.json');
 const TASKS_DB_PATH = path.join(DATA_DIR, 'tasks.json');
 const PLAN_REQUESTS_DB_PATH = path.join(DATA_DIR, 'plan-requests.json');
 const MESSAGES_DB_PATH = path.join(DATA_DIR, 'messages.json');
+const CONTACT_REQUESTS_DB_PATH = path.join(DATA_DIR, 'contact-requests.json');
 
 const DEV_DEFAULT_ADMIN_EMAIL = 'admin@across-platform.hu';
 const DEV_DEFAULT_ADMIN_PASSWORD = 'Admin!ChangeMe2026';
@@ -26,23 +27,23 @@ const SUPPORT_PLANS = {
   basic: {
     key: 'basic',
     name: 'Basic',
-    price: '5 000 Ft',
+    price: '9.990 Ft / 30 perc',
     includedMinutes: 30,
-    features: ['Gyors távoli hibakeresés', 'Alap összefoglaló', 'Email támogatás']
+    features: ['Távoli segítség', 'Általános hibák elhárítása', 'E-mail támogatás']
   },
   pro: {
     key: 'pro',
-    name: 'Pro támogatás',
-    price: '10 000 Ft',
-    includedMinutes: 120,
-    features: ['Elsőbbségi időpontok', 'Részletes távoli támogatás', 'Biztonsági ellenőrzés munkamenet után']
+    name: 'Pro',
+    price: '17.990 Ft / 60 perc',
+    includedMinutes: 60,
+    features: ['Minden Basic szolgáltatás', 'Elsőbbségi támogatás', 'Bonyolultabb problémák']
   },
   business: {
     key: 'business',
-    name: 'Business',
+    name: 'Nagyobb projekthez egyedi ajánlat',
     price: 'Egyedi ajánlat',
-    includedMinutes: 300,
-    features: ['Rendszeres karbantartás', 'Prioritásos válaszidő', 'Részletes havi munkanapló']
+    includedMinutes: 0,
+    features: ['Előzetes igényfelmérés', 'Projektalapú ütemezés', 'Adminisztrált munkanapló']
   }
 };
 
@@ -90,6 +91,14 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Túl sok próbálkozás. Kérlek várj pár percet.' }
+});
+
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Túl sok megkeresés. Kérlek próbáld újra pár perc múlva.' }
 });
 
 function normalizeEmail(email) {
@@ -309,6 +318,19 @@ function messageWithDefaults(message) {
   };
 }
 
+function contactRequestWithDefaults(request) {
+  return {
+    id: request.id || crypto.randomUUID(),
+    name: sanitizeName(request.name || ''),
+    email: normalizeEmail(request.email || ''),
+    message: sanitizeMultiline(request.message || '', 1600),
+    status: ['new', 'in_progress', 'replied', 'archived'].includes(request.status) ? request.status : 'new',
+    adminNote: sanitizeMultiline(request.adminNote || '', 800),
+    createdAt: request.createdAt || new Date().toISOString(),
+    updatedAt: request.updatedAt || request.createdAt || new Date().toISOString()
+  };
+}
+
 function requireAuth(req, res, next) {
   if (!req.session?.user) {
     return res.status(401).json({ error: 'Nincs bejelentkezve.' });
@@ -365,6 +387,15 @@ async function ensureMessagesDb() {
   }
 }
 
+async function ensureContactRequestsDb() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.access(CONTACT_REQUESTS_DB_PATH);
+  } catch {
+    await fs.writeFile(CONTACT_REQUESTS_DB_PATH, JSON.stringify({ requests: [] }, null, 2));
+  }
+}
+
 async function readUsers() {
   await ensureUsersDb();
   const raw = await fs.readFile(USERS_DB_PATH, 'utf-8');
@@ -393,6 +424,13 @@ async function readMessages() {
   return Array.isArray(parsed.messages) ? parsed.messages.map(messageWithDefaults) : [];
 }
 
+async function readContactRequests() {
+  await ensureContactRequestsDb();
+  const raw = await fs.readFile(CONTACT_REQUESTS_DB_PATH, 'utf-8');
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.requests) ? parsed.requests.map(contactRequestWithDefaults) : [];
+}
+
 async function writeUsers(users) {
   await fs.writeFile(USERS_DB_PATH, JSON.stringify({ users }, null, 2));
 }
@@ -407,6 +445,10 @@ async function writePlanRequests(requests) {
 
 async function writeMessages(messages) {
   await fs.writeFile(MESSAGES_DB_PATH, JSON.stringify({ messages: messages.map(messageWithDefaults) }, null, 2));
+}
+
+async function writeContactRequests(requests) {
+  await fs.writeFile(CONTACT_REQUESTS_DB_PATH, JSON.stringify({ requests: requests.map(contactRequestWithDefaults) }, null, 2));
 }
 
 function buildTaskFromRequest(body, existing = null) {
@@ -611,6 +653,37 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   return res.status(200).json({ user: req.session.user });
 });
 
+app.post('/api/contact-requests', contactLimiter, async (req, res) => {
+  try {
+    const name = sanitizeName(req.body?.name);
+    const email = normalizeEmail(req.body?.email);
+    const message = sanitizeMultiline(req.body?.message, 1600);
+
+    if (!name || name.length < 2) return res.status(400).json({ error: 'Add meg a neved.' });
+    if (!isValidEmail(email)) return res.status(400).json({ error: 'Adj meg érvényes email címet.' });
+    if (!message || message.length < 3) return res.status(400).json({ error: 'Írj rövid üzenetet.' });
+
+    const now = new Date().toISOString();
+    const request = contactRequestWithDefaults({
+      id: crypto.randomUUID(),
+      name,
+      email,
+      message,
+      status: 'new',
+      createdAt: now,
+      updatedAt: now
+    });
+    const requests = await readContactRequests();
+    requests.push(request);
+    await writeContactRequests(requests);
+
+    return res.status(201).json({ ok: true, request, message: 'Megkeresés elküldve. Hamarosan jelentkezünk.' });
+  } catch (error) {
+    console.error('contact request error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
 app.get('/api/account/overview', requireAuth, async (req, res) => {
   try {
     const users = (await readUsers()).map(userWithDefaults);
@@ -622,10 +695,14 @@ app.get('/api/account/overview', requireAuth, async (req, res) => {
     const planRequests = (await readPlanRequests())
       .filter(request => request.userId === user.id)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const messages = (await readMessages())
+      .filter(message => message.userId === user.id)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     return res.status(200).json({
       ...buildAccountOverview(user, tasks),
       plans: Object.values(SUPPORT_PLANS),
-      planRequests
+      planRequests,
+      messages
     });
   } catch (error) {
     console.error('account overview error', error);
@@ -893,6 +970,42 @@ app.patch('/api/admin/plan-requests/:requestId', requireAdmin, async (req, res) 
     return res.status(200).json({ ok: true, request: requests[index], message: status === 'approved' ? 'Kérelem jóváhagyva.' : 'Kérelem elutasítva.' });
   } catch (error) {
     console.error('admin plan request update error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.get('/api/admin/contact-requests', requireAdmin, async (req, res) => {
+  try {
+    const requests = (await readContactRequests())
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return res.status(200).json({ requests });
+  } catch (error) {
+    console.error('admin contact requests error', error);
+    return res.status(500).json({ error: 'Szerverhiba.' });
+  }
+});
+
+app.patch('/api/admin/contact-requests/:requestId', requireAdmin, async (req, res) => {
+  try {
+    const requestId = String(req.params.requestId || '');
+    const status = sanitizeText(req.body?.status, 40);
+    const adminNote = sanitizeMultiline(req.body?.adminNote, 800);
+    if (!['new', 'in_progress', 'replied', 'archived'].includes(status)) {
+      return res.status(400).json({ error: 'Érvénytelen megkeresés státusz.' });
+    }
+
+    const requests = await readContactRequests();
+    const index = requests.findIndex(request => request.id === requestId);
+    if (index < 0) return res.status(404).json({ error: 'Megkeresés nem található.' });
+
+    requests[index].status = status;
+    requests[index].adminNote = adminNote;
+    requests[index].updatedAt = new Date().toISOString();
+    await writeContactRequests(requests);
+
+    return res.status(200).json({ ok: true, request: requests[index], message: 'Megkeresés frissítve.' });
+  } catch (error) {
+    console.error('admin contact request update error', error);
     return res.status(500).json({ error: 'Szerverhiba.' });
   }
 });
