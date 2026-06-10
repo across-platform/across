@@ -722,6 +722,25 @@ html:not([data-theme="dark"]) .hero-concept h2 span {
   font-weight: 800;
 }
 
+.plan-subtitle {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.plan-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
